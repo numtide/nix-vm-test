@@ -1,27 +1,27 @@
-{ genericSetup, pkgs, lib }:
-{
-  prepareUbuntuImage = { hostPkgs, nodeConfig, image, extraPathsToRegister ? [ ] }:
+{ generic, pkgs, lib, system }:
+let
+  images = lib.importJSON ./images.json;
+  fetchImage = image: pkgs.fetchurl {
+    inherit (image) hash;
+    url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
+  };
+in {
+  images = lib.mapAttrs (k: v: fetchImage v) images.${system};
+  prepareUbuntuImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ] }:
     let
       pkgs = hostPkgs;
-
-      img = pkgs.fetchurl {
-        inherit (image) hash;
-        url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
-      };
-
       resultImg = "./image.qcow2";
-
       # The nix store paths that need to be added to the nix DB for this node.
-      pathsToRegister = [ nodeConfig.systemConfig ] ++ extraPathsToRegister;
+      pathsToRegister =  extraPathsToRegister;
     in
-    pkgs.runCommand "${image.name}-nixos-test-anywhere.qcow2" { } ''
+    pkgs.runCommand "${originalImage.name}-nixos-test-anywhere.qcow2" { } ''
       # We will modify the VM image, so we need a mutable copy
-      install -m777 ${img} ${resultImg}
+      install -m777 ${originalImage} ${resultImg}
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${genericSetup.backdoor { inherit pkgs; }} backdoor.service
-      cp ${genericSetup.mountStore { inherit pkgs pathsToRegister; }} mount-store.service
+      cp ${generic.backdoor { inherit pkgs; }} backdoor.service
+      cp ${generic.mountStore { inherit pkgs pathsToRegister; }} mount-store.service
 
       #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1
       ${lib.concatStringsSep "  \\\n" [

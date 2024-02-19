@@ -1,11 +1,16 @@
 { lib, pkgs, nixpkgs }:
 rec {
+  defaultMachineConfigModule = name: { ... }: {
+    nodes = {
+      vm.system.name = name;
+    };
+  };
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
   # Careful since we do not have the nix store yet when this service runs,
   # so we cannot use pkgs.writeTest or pkgs.writeShellScript for instance,
   # since their results would refer to the store
-  mount_store = { pkgs, pathsToRegister }:
+  mountStore = { pkgs, pathsToRegister }:
     let
       pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
@@ -76,21 +81,22 @@ rec {
       WantedBy = multi-user.target
     '';
 
-  make-vm-test =
-    name:
+  makeVmTest =
     { system
     , image
     , testScript
+    , machineConfigModule ? (defaultMachineConfigModule name)
+    , name
     }:
     let
-      hostPkgs = nixpkgs.legacyPackages.${system};
+      hostPkgs = pkgs;
 
       config = (lib.evalModules {
         modules = [
-          ../test/nix/test-driver/modules
+          ./module.nix
+          machineConfigModule
           {
             _file = "${printAttrPos (builtins.unsafeGetAttrPos "a" { a = null; })}: inline module";
-            inherit hostPkgs;
           }
         ];
       }).config;
@@ -144,7 +150,7 @@ rec {
 
       test-driver = hostPkgs.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
 
-      runTest = { nodes, vlans, testScript, extraDriverArgs }: ''
+      runTest = { nodes, vlans, extraDriverArgs }: ''
         ${lib.getBin test-driver}/bin/nixos-test-driver \
           ${extraDriverArgs} \
           --start-scripts ${lib.concatStringsSep " " nodes} \
@@ -154,11 +160,10 @@ rec {
 
       defaultTest = { extraDriverArgs ? "" }: runTest {
         inherit extraDriverArgs nodes;
-        inherit (config) testScript;
         vlans = [ "1" ];
       };
     in
-    hostPkgs.stdenv.mkDerivation (finalAttrs: {
+    hostPkgs.stdenv.mkDerivation {
       inherit name;
 
       requiredSystemFeatures = [ "kvm" "nixos-test" ];
@@ -169,10 +174,10 @@ rec {
       '';
 
       passthru = {
-        driverInteractive = hostPkgs.writeShellScriptBin "run-vm"
+        driverInteractive = hostPkgs.writeShellScriptBin "test-driver"
           (defaultTest {
             extraDriverArgs = "--interactive";
           });
       };
-    });
+    };
 }

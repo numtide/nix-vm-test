@@ -5,7 +5,7 @@ let
   pkgs = import nixpkgs { inherit system; };
   inherit (nixpkgs) lib;
   generic = pkgs.callPackage ./generic { inherit nixpkgs; };
-  ubuntu = pkgs.callPackage ./ubuntu { inherit generic; };
+  ubuntu = pkgs.callPackage ./ubuntu { inherit generic system; };
   # Function that can be used when defining inline modules to get better location
   # reporting in module-system errors.
   # Usage example:
@@ -13,12 +13,12 @@ let
   nixos = "${nixpkgs}/nixos";
 in
 rec {
-  ubuntuStable = testScript: generic.make-vm-test "ubuntu-stable" {
-    inherit system testScript;
+  ubuntuStableRun = { testScript, name, sharedDirs}: generic.makeVmTest {
+    inherit system testScript name;
     image = ubuntu.prepareUbuntuImage {
-      hostPkgs = { };
-      nodeConfig = { };
-      image = { };
+      hostPkgs = pkgs;
+      originalImage = ubuntu.images."ubuntu_23_04_cloudimg";
     };
+
   };
 }
