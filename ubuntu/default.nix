@@ -6,7 +6,7 @@ let
     url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
   };
   makeVmTestForImage = image: { testScript, name, sharedDirs }: generic.makeVmTest {
-    inherit system testScript name;
+    inherit system testScript name sharedDirs;
     image = prepareUbuntuImage {
       hostPkgs = pkgs;
       originalImage = image;

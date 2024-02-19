@@ -10,7 +10,7 @@ rec {
   # Careful since we do not have the nix store yet when this service runs,
   # so we cannot use pkgs.writeTest or pkgs.writeShellScript for instance,
   # since their results would refer to the store
-  mountStore = { pkgs, pathsToRegister }:
+  mountStore = { pkgs, pathsToRegister}:
     let
       pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
@@ -85,15 +85,37 @@ rec {
     { system
     , image
     , testScript
+    , sharedDirs
     , machineConfigModule ? (defaultMachineConfigModule name)
     , name
     }:
     let
       hostPkgs = pkgs;
 
+      mountSharesScript = pkgs.writeScriptBin "mount-shares" {} ''
+      '';
+
+      # TODO: hacky hacky… We need to mount the 9p shares at some
+      # point, however, doing so in the image generation phase would
+      # force us to rebuild images for each and every mount topology.
+      #
+      # Doing this from the test driver itself saves us this rebuild.
+      # However, the 9p shares won't be mounted in the interactive
+      # test driver by default.
+      #
+      # There must be a better hook for this.
+      testScriptWithMounts = ''
+        ${lib.concatStringsSep "\n"
+        (lib.mapAttrsToList
+        (tag: share:
+        "${name}.succeed('mkdir -p ${share.target} && mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} ${tag} ${share.target}')")
+        sharedDirs)}
+      '' + testScript;
+
       config = (lib.evalModules {
         modules = [
-          ./module.nix
+          (./module.nix)
+          ({ config, ... }: { nodes.vm.virtualisation.sharedDirectories = sharedDirs; })
           machineConfigModule
           {
             _file = "${printAttrPos (builtins.unsafeGetAttrPos "a" { a = null; })}: inline module";
@@ -155,7 +177,7 @@ rec {
           ${extraDriverArgs} \
           --start-scripts ${lib.concatStringsSep " " nodes} \
           --vlans ${lib.concatStringsSep " " vlans} \
-          -- ${hostPkgs.writeText "test-script" testScript}
+          -- ${hostPkgs.writeText "test-script" testScriptWithMounts}
       '';
 
       defaultTest = { extraDriverArgs ? "" }: runTest {

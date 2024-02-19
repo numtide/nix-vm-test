@@ -9,6 +9,6 @@
     lib = system: import ./lib.nix {
       inherit nixpkgs system;
     };
-    checks.x86_64-linux = import ./tests { package = lib "x86_64-linux"; };
+    checks.x86_64-linux = import ./tests { package = lib "x86_64-linux"; pkgs = nixpkgs.legacyPackages.x86_64-linux; };
   };
 }
