@@ -19,7 +19,7 @@ let
       # The nix store paths that need to be added to the nix DB for this node.
       pathsToRegister =  extraPathsToRegister;
     in
-    pkgs.runCommand "${originalImage.name}-nixos-test-anywhere.qcow2" { } ''
+    pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
       # We will modify the VM image, so we need a mutable copy
       install -m777 ${originalImage} ${resultImg}
 
