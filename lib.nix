@@ -11,14 +11,6 @@ let
   # Usage example:
   #   { _file = "${printAttrPos (builtins.unsafeGetAttrPos "a" { a = null; })}: inline module"; }
   nixos = "${nixpkgs}/nixos";
-in
-rec {
-  ubuntuStableRun = { testScript, name, sharedDirs}: generic.makeVmTest {
-    inherit system testScript name;
-    image = ubuntu.prepareUbuntuImage {
-      hostPkgs = pkgs;
-      originalImage = ubuntu.images."ubuntu_23_04_cloudimg";
-    };
-
-  };
+in {
+  inherit ubuntu;
 }

@@ -1,12 +1,17 @@
 { generic, pkgs, lib, system }:
 let
-  images = lib.importJSON ./images.json;
+  imagesJSON = lib.importJSON ./images.json;
   fetchImage = image: pkgs.fetchurl {
     inherit (image) hash;
     url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
   };
-in {
-  images = lib.mapAttrs (k: v: fetchImage v) images.${system};
+  makeVmTestForImage = image: { testScript, name, sharedDirs }: generic.makeVmTest {
+    inherit system testScript name;
+    image = prepareUbuntuImage {
+      hostPkgs = pkgs;
+      originalImage = image;
+    };
+  };
   prepareUbuntuImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ] }:
     let
       pkgs = hostPkgs;
@@ -55,4 +60,7 @@ in {
 
       cp ${resultImg} $out
     '';
-}
+    images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
+in {
+  inherit images prepareUbuntuImage;
+} // lib.mapAttrs (k: v: makeVmTestForImage v) images

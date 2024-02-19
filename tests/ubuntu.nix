@@ -1,7 +1,7 @@
 { package }:
 
 {
-  ubuntuStable = package.ubuntuStableRun {
+  ubuntuStable = package.ubuntu."ubuntu_23_04" {
     name = "test_ubuntu_stable";
     sharedDirs = {};
     testScript = ''
