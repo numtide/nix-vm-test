@@ -1,5 +1,7 @@
 # Nix-Vm-Test
 
+test
+
 Re-use the NixOS VM test infrastructure to test Ubuntu, Debian, and Fedora machines.
 
 The API is very WIP/unstable, do not expect much stability for now.
