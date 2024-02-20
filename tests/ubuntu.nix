@@ -2,7 +2,17 @@
 
 let
   lib = package.${system};
-
+  multiUserTest = runner: runner {
+    name = "multiuser";
+    sharedDirs = {};
+    testScript = ''
+      multiuser.wait_for_unit("multi-user.target")
+    '';
+  };
+  runTestOnEveryImage = name: test:
+    pkgs.lib.mapAttrs'
+    (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.ubuntu.${n}))
+    lib.ubuntu.images;
 in {
   dummyTest = lib.ubuntu."ubuntu_23_04" {
     name = "test_ubuntu_dummy";
@@ -41,4 +51,6 @@ in {
     '';
   };
 
-} // package.${system}.ubuntu.images
+}
+// package.${system}.ubuntu.images
+// runTestOnEveryImage "multiusertest" multiUserTest
