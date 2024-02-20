@@ -3,17 +3,17 @@ let
   imagesJSON = lib.importJSON ./images.json;
   fetchImage = image: pkgs.fetchurl {
     inherit (image) hash;
-    url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
+    url = "https://cloud.debian.org/images/cloud/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
   makeVmTestForImage = image: { testScript, name, sharedDirs }: generic.makeVmTest {
     inherit system testScript name sharedDirs;
-    image = prepareUbuntuImage {
+    image = prepareDebianImage {
       hostPkgs = pkgs;
       originalImage = image;
     };
   };
-  prepareUbuntuImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ] }:
+  prepareDebianImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ]}:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -46,10 +46,6 @@ let
           # Don't spawn ttys on these devices, they are used for test instrumentation
           systemctl mask serial-getty@ttyS0.service
           systemctl mask serial-getty@hvc0.service
-          # Speed up the boot process
-          systemctl mask snapd.service
-          systemctl mask snapd.socket
-          systemctl mask snapd.seeded.service
 
           # We have no network in the test VMs, avoid an error on bootup
           systemctl mask ssh.service
@@ -62,6 +58,5 @@ let
       cp ${resultImg} $out
     '';
 in {
-  inherit prepareUbuntuImage;
-  images = images;
+  inherit images prepareDebianImage;
 } // lib.mapAttrs (k: v: makeVmTestForImage v) images

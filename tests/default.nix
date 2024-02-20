@@ -1,4 +1,7 @@
-{ package, pkgs }:
+{ package, pkgs, system }:
 let
-  ubuntu = import ./ubuntu.nix { inherit package pkgs; };
-in ubuntu
+  lib = pkgs.lib;
+  addPrefixToTests = prefix: tests: lib.mapAttrs' (n: v: lib.nameValuePair (prefix + n) v) tests;
+  ubuntu = addPrefixToTests "ubuntu-" (import ./ubuntu.nix { inherit package pkgs system; });
+  debian = addPrefixToTests "debian-" (import ./debian.nix { inherit package pkgs system; });
+in ubuntu // debian

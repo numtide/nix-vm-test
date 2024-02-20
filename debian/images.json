@@ -1,0 +1,12 @@
+{
+  "x86_64-linux": {
+    "12": {
+      "name": "bookworm/20240211-1654/debian-12-genericcloud-amd64-20240211-1654.raw",
+      "hash": "sha256-tOcDQKxK66NuhoRC4pQOQurKFZJaYJ+dv949xRyclmE="
+    },
+    "13": {
+      "name": "trixie/daily/20240220-1663/debian-13-genericcloud-amd64-daily-20240220-1663.raw",
+      "hash": "sha256-uMcdn1W2qKuVjYjqg2W/wNb3v3DRAJhnMi6tDcXKs+M="
+    }
+  }
+}

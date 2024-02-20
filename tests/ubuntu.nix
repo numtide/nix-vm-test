@@ -1,7 +1,10 @@
-{ pkgs, package }:
+{ pkgs, package, system }:
 
-{
-  dummyTest = package.ubuntu."ubuntu_23_04" {
+let
+  lib = package.${system};
+
+in {
+  dummyTest = lib.ubuntu."ubuntu_23_04" {
     name = "test_ubuntu_dummy";
     sharedDirs = {};
     testScript = ''
@@ -18,7 +21,7 @@
       mkdir -p $out
       echo "hello2" > $out/somefile2
     '';
-  in package.ubuntu."ubuntu_23_04" {
+  in lib.ubuntu."ubuntu_23_04" {
     name = "shared_dir_test";
     sharedDirs = {
       dir1 = {
@@ -37,4 +40,5 @@
       shared_dir_test.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
     '';
   };
-}
+
+} // package.${system}.ubuntu.images

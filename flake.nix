@@ -6,9 +6,10 @@
   };
 
   outputs = { self, nixpkgs, ... }: rec {
-    lib = system: import ./lib.nix {
-      inherit nixpkgs system;
+    lib.x86_64-linux = import ./lib.nix {
+      inherit nixpkgs;
+      system = "x86_64-linux";
     };
-    checks.x86_64-linux = import ./tests { package = lib "x86_64-linux"; pkgs = nixpkgs.legacyPackages.x86_64-linux; };
+    checks.x86_64-linux = import ./tests { package = lib; pkgs = nixpkgs.legacyPackages.x86_64-linux; system = "x86_64-linux"; };
   };
 }
