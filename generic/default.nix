@@ -123,13 +123,16 @@ rec {
         ];
       }).config;
 
-      nodes = map runVmScript (lib.attrValues config.nodes);
+      nodes = interactive: map (runVmScript interactive) (lib.attrValues config.nodes);
 
-      runVmScript = node:
+      runVmScript = interactive: node:
+      let
+        qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
-        hostPkgs.writeShellScript "run-${node.system.name}-vm" ''
+      in hostPkgs.writeShellScript "run-${node.system.name}-vm"
+         ''
           set -eo pipefail
 
           export PATH=${lib.makeBinPath [ hostPkgs.coreutils ]}''${PATH:+:}$PATH
@@ -149,7 +152,7 @@ rec {
           # support architectures other than x86_64.
           # See qemu-common.nix in nixpkgs.
           ${lib.concatStringsSep "\\\n  " [
-            "exec ${lib.getBin hostPkgs.qemu_test}/bin/qemu-kvm"
+            "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
             "-device virtio-rng-pci"
             "-cpu max"
             "-name ${node.system.name}"
@@ -164,7 +167,7 @@ rec {
                 (tag: share: "-virtfs local,path=${share.source},security_model=none,mount_tag=${tag}")
                   node.virtualisation.sharedDirectories))
             "-snapshot"
-            "-nographic"
+            (lib.optionalString (!interactive) "-nographic")
             "$QEMU_OPTS"
             "$@"
           ]};
@@ -172,16 +175,16 @@ rec {
 
       test-driver = hostPkgs.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
 
-      runTest = { nodes, vlans, extraDriverArgs }: ''
+      runTest = { nodes, vlans, interactive }: ''
         ${lib.getBin test-driver}/bin/nixos-test-driver \
-          ${extraDriverArgs} \
-          --start-scripts ${lib.concatStringsSep " " nodes} \
+        ${lib.optionalString interactive "--interactive"} \
+        --start-scripts ${lib.concatStringsSep " " (nodes interactive)} \
           --vlans ${lib.concatStringsSep " " vlans} \
           -- ${hostPkgs.writeText "test-script" testScriptWithMounts}
       '';
 
-      defaultTest = { extraDriverArgs ? "" }: runTest {
-        inherit extraDriverArgs nodes;
+      defaultTest = { interactive ? false }: runTest {
+        inherit interactive nodes;
         vlans = [ "1" ];
       };
     in
@@ -198,7 +201,7 @@ rec {
       passthru = {
         driverInteractive = hostPkgs.writeShellScriptBin "test-driver"
           (defaultTest {
-            extraDriverArgs = "--interactive";
+            interactive = true;
           });
       };
     };
