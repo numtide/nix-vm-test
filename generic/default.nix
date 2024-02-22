@@ -199,6 +199,10 @@ rec {
       '';
 
       passthru = {
+        driver = hostPkgs.writeShellScriptBin "test-driver"
+          (defaultTest {
+            interactive = false;
+          });
         driverInteractive = hostPkgs.writeShellScriptBin "test-driver"
           (defaultTest {
             interactive = true;
