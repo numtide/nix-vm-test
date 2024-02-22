@@ -14,7 +14,7 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.ubuntu.${n}))
     lib.ubuntu.images;
 in {
-  dummyTest = lib.ubuntu."ubuntu_23_04" {
+  dummyTest = lib.ubuntu."23_04" {
     name = "test_ubuntu_dummy";
     sharedDirs = {};
     testScript = ''
@@ -31,7 +31,7 @@ in {
       mkdir -p $out
       echo "hello2" > $out/somefile2
     '';
-  in lib.ubuntu."ubuntu_23_04" {
+  in lib.ubuntu."23_04" {
     name = "shared_dir_test";
     sharedDirs = {
       dir1 = {

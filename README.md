@@ -7,7 +7,7 @@ The API is very WIP/unstable, do not expect much stability for now.
 ## Usage
 
 ```nix
-nix-vm-test.lib.ubuntu."ubuntu_23_04" {
+nix-vm-test.lib.ubuntu."23_04" {
   name = "example";
   sharedDirs = {
   };
