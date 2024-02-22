@@ -1,5 +1,12 @@
 {
   "x86_64-linux": {
+    "23_10": {
+      "name": "ubuntu-23.10-server-cloudimg-amd64.img",
+      "releaseName": "mantic",
+      "releaseTimeStamp": "20240209",
+      "hash": "sha256-L52ZJeR4TlguNLEIyU5v/gcyPHAxhbqzFe5X4PxA9ns="
+    },
+
     "23_04": {
       "name": "ubuntu-23.04-server-cloudimg-amd64.img",
       "releaseName": "lunar",
