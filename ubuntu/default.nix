@@ -55,6 +55,16 @@ let
           systemctl mask ssh.service
           systemctl mask ssh.socket
 
+
+          cat << EOF >> /etc/netplan/99_config.yaml
+          network:
+            version: 2
+            renderer: networkd
+            ethernets:
+              ens4:
+                dhcp4: true
+          EOF
+
           systemctl enable backdoor.service
         '')
       ]};
