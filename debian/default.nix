@@ -51,6 +51,15 @@ let
           systemctl mask ssh.service
           systemctl mask ssh.socket
 
+          # Retrieve guest interface conf via DHCP
+          cat << EOF >> /etc/systemd/network/80-ens4.network
+          [Match]
+          Name=ens4
+
+          [Network]
+          DHCP=yes
+          EOF
+
           systemctl enable backdoor.service
         '')
       ]};
