@@ -6,14 +6,15 @@ let
     url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, name, sharedDirs }: generic.makeVmTest {
+  makeVmTestForImage = image: { testScript, name, sharedDirs, diskSize ? null }: generic.makeVmTest {
     inherit system testScript name sharedDirs;
     image = prepareUbuntuImage {
+      inherit diskSize;
       hostPkgs = pkgs;
       originalImage = image;
     };
   };
-  prepareUbuntuImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ] }:
+  prepareUbuntuImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister ? [ ] }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -28,6 +29,12 @@ let
       # with their paths including the nix hash
       cp ${generic.backdoor { inherit pkgs; }} backdoor.service
       cp ${generic.mountStore { inherit pkgs pathsToRegister; }} mount-store.service
+      cp ${generic.resizeService} resizeguest.service
+
+      ${lib.optionalString (diskSize != null) ''
+        qemu-img resize ${resultImg} +2G
+        systemctl enable resizeguest.service
+      ''}
 
       #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1
       ${lib.concatStringsSep "  \\\n" [
@@ -38,6 +45,7 @@ let
         "--no-network"
         "--copy-in backdoor.service:/etc/systemd/system"
         "--copy-in mount-store.service:/etc/systemd/system"
+        "--copy-in resizeguest.service:/etc/systemd/system"
         "--run"
         (pkgs.writeShellScript "run-script" ''
           # Clear the root password
@@ -65,6 +73,9 @@ let
                 dhcp4: true
           EOF
 
+          ${lib.optionalString (diskSize != null) ''
+            systemctl enable resizeguest.service
+          ''}
           systemctl enable backdoor.service
         '')
       ]};

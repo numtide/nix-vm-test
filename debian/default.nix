@@ -6,14 +6,15 @@ let
     url = "https://cloud.debian.org/images/cloud/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, name, sharedDirs }: generic.makeVmTest {
+  makeVmTestForImage = image: { testScript, name, sharedDirs, diskSize ? null }: generic.makeVmTest {
     inherit system testScript name sharedDirs;
     image = prepareDebianImage {
+      inherit diskSize;
       hostPkgs = pkgs;
       originalImage = image;
     };
   };
-  prepareDebianImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ]}:
+  prepareDebianImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister ? [ ]}:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -28,6 +29,14 @@ let
       # with their paths including the nix hash
       cp ${generic.backdoor { inherit pkgs; }} backdoor.service
       cp ${generic.mountStore { inherit pkgs pathsToRegister; }} mount-store.service
+      cp ${generic.resizeService} resizeguest.service
+
+      # virt-resize depends on qemu-img, which is part of the qemu
+      # derivation
+      export PATH="${pkgs.qemu}/bin:$PATH"
+      ${lib.optionalString (diskSize != null) ''
+        qemu-img resize ${resultImg} ${diskSize}
+      ''}
 
       #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1
       ${lib.concatStringsSep "  \\\n" [
@@ -38,6 +47,7 @@ let
         "--no-network"
         "--copy-in backdoor.service:/etc/systemd/system"
         "--copy-in mount-store.service:/etc/systemd/system"
+        "--copy-in resizeguest.service:/etc/systemd/system"
         "--run"
         (pkgs.writeShellScript "run-script" ''
           # Clear the root password
@@ -60,7 +70,11 @@ let
           DHCP=yes
           EOF
 
+          ${lib.optionalString (diskSize != null) ''
+            systemctl enable resizeguest.service
+          ''}
           systemctl enable backdoor.service
+
         '')
       ]};
 
