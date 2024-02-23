@@ -81,6 +81,17 @@ rec {
       WantedBy = multi-user.target
     '';
 
+    resizeService = pkgs.writeText "resizeService" ''
+      [Service]
+      Type = oneshot
+      ExecStart = apt-get install -yq cloud-guest-utils
+      ExecStart = growpart /dev/sda 1
+      ExecStart = resize2fs /dev/sda1
+
+      [Install]
+      WantedBy = multi-user.target
+    '';
+
   makeVmTest =
     { system
     , image
