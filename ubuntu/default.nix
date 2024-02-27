@@ -34,7 +34,6 @@ let
       ${lib.optionalString (diskSize != null) ''
         export PATH="${pkgs.qemu}/bin:$PATH"
         qemu-img resize ${resultImg} +2G
-        systemctl enable resizeguest.service
       ''}
 
       #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1

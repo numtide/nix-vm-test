@@ -14,12 +14,13 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.ubuntu.${n}))
     lib.ubuntu.images;
 in {
-  dummyTest = lib.ubuntu."23_04" {
-    name = "test_ubuntu_dummy";
+  resizeImage = lib.ubuntu."23_04" {
+    name = "test_ubuntu_size";
     sharedDirs = {};
     testScript = ''
-      test_ubuntu_dummy.wait_for_unit("multi-user.target")
-  '';
+      test_ubuntu_size.wait_for_unit("multi-user.target")
+    '';
+    diskSize = "+2M";
   };
 
   sharedDirTest = let
