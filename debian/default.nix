@@ -33,8 +33,8 @@ let
 
       # virt-resize depends on qemu-img, which is part of the qemu
       # derivation
-      export PATH="${pkgs.qemu}/bin:$PATH"
       ${lib.optionalString (diskSize != null) ''
+        export PATH="${pkgs.qemu}/bin:$PATH"
         qemu-img resize ${resultImg} ${diskSize}
       ''}
 
