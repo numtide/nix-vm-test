@@ -13,6 +13,15 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.debian.${n}))
     lib.debian.images;
 in {
+  resizeImage = lib.debian."13" {
+    name = "test_debian_size";
+    sharedDirs = {};
+    testScript = ''
+      test_debian_size.wait_for_unit("multi-user.target")
+    '';
+    diskSize = "+2M";
+  };
+
   sharedDirTest = let
     dir1 = pkgs.runCommandNoCC "dir1" {} ''
       mkdir -p $out
