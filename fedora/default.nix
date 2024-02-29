@@ -3,23 +3,47 @@ let
   imagesJSON = lib.importJSON ./images.json;
   fetchImage = image: pkgs.fetchurl {
     inherit (image) hash;
-    url = "https://cloud.debian.org/images/cloud/${image.name}";
+    url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
   makeVmTestForImage = image: { testScript, name, sharedDirs, diskSize ? null }: generic.makeVmTest {
     inherit system testScript name sharedDirs;
-    image = prepareDebianImage {
+    image = prepareFedoraImage {
       inherit diskSize;
       hostPkgs = pkgs;
       originalImage = image;
     };
   };
-  prepareDebianImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister ? [ ]}:
+
+  resizeService = pkgs.writeText "resizeService" ''
+    [Service]
+    Type = oneshot
+    ExecStart = growpart /dev/sda 5
+    ExecStart = btrfs filesystem resize max /
+
+    [Install]
+    WantedBy = multi-user.target
+  '';
+
+  backdoor = pkgs.writeText "backdoor.service" ''
+      [Unit]
+      Requires = dev-hvc0.device dev-ttyS0.device mount-store.service
+      After = dev-hvc0.device dev-ttyS0.device mount-store.service
+      # Keep this unit active when we switch to rescue mode for instance
+      IgnoreOnIsolate = true
+
+      [Service]
+      ExecStart = /usr/bin/backdoorScript
+      KillSignal = SIGHUP
+
+      [Install]
+      WantedBy = multi-user.target
+    '';
+  prepareFedoraImage = { hostPkgs, originalImage, diskSize }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
       # The nix store paths that need to be added to the nix DB for this node.
-      pathsToRegister =  extraPathsToRegister;
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
       # We will modify the VM image, so we need a mutable copy
@@ -27,9 +51,14 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${generic.backdoor} backdoor.service
+      cp ${backdoor} backdoor.service
       cp ${generic.mountStore} mount-store.service
-      cp ${generic.resizeService} resizeguest.service
+      cp ${resizeService} resizeguest.service
+      cp ${generic.backdoorScript} backdoorScript
+
+      # Patching the patched shebang to a reasonable path: /bin/bash.
+      # Mic92 approves this.
+      sed -i 's/\/nix\/store\/.*/\/bin\/bash/g' backdoorScript
 
       # virt-resize depends on qemu-img, which is part of the qemu
       # derivation
@@ -45,6 +74,7 @@ let
         "--smp 2"
         "--memsize 256"
         "--no-network"
+        "--copy-in backdoorScript:/usr/bin"
         "--copy-in backdoor.service:/etc/systemd/system"
         "--copy-in mount-store.service:/etc/systemd/system"
         "--copy-in resizeguest.service:/etc/systemd/system"
@@ -52,6 +82,8 @@ let
         (pkgs.writeShellScript "run-script" ''
           # Clear the root password
           passwd -d root
+
+          groupadd nixbld
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
           systemctl mask serial-getty@ttyS0.service
@@ -73,6 +105,7 @@ let
           ${lib.optionalString (diskSize != null) ''
             systemctl enable resizeguest.service
           ''}
+          systemctl enable register-nix-paths.service
           systemctl enable backdoor.service
 
         '')
@@ -81,5 +114,5 @@ let
       cp ${resultImg} $out
     '';
 in {
-  inherit images prepareDebianImage;
+  inherit images prepareFedoraImage;
 } // lib.mapAttrs (k: v: makeVmTestForImage v) images

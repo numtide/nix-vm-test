@@ -27,8 +27,8 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${generic.backdoor { inherit pkgs; }} backdoor.service
-      cp ${generic.mountStore { inherit pkgs pathsToRegister; }} mount-store.service
+      cp ${generic.backdoor} backdoor.service
+      cp ${generic.mountStore} mount-store.service
       cp ${generic.resizeService} resizeguest.service
 
       ${lib.optionalString (diskSize != null) ''
