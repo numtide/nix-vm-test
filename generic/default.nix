@@ -7,35 +7,83 @@ rec {
   };
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
-  # Careful since we do not have the nix store yet when this service runs,
-  # so we cannot use pkgs.writeTest or pkgs.writeShellScript for instance,
-  # since their results would refer to the store
-  mountStore = { pkgs, pathsToRegister}:
-    let
-      pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
+
+  registerPaths = { pkgs, pathsToRegister }:
+  let
+    pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
+    registerStorePaths = pkgs.writeShellScript "execstartpost-script" ''
+      echo "hello?"
+      ls -l ${lib.getBin pkgs.nix}/bin/nix-store
+      ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
+    '';
     in
-    pkgs.writeText "mount-store.service" ''
+    pkgs.writeText "register-store-paths.service" ''
+      [Unit]
+      Requires = mount-store.service
       [Service]
       Type = oneshot
-      ExecStart = mkdir -p /nix/.ro-store
-      ExecStart = mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store
-      ExecStart = mkdir -p -m 0755 /nix/.rw-store/ /nix/store
-      ExecStart = mount -t tmpfs tmpfs /nix/.rw-store
-      ExecStart = mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work
-      ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
-
+      ProtectSystem=false
       # Register the required paths in the nix DB.
       # The store has been mounted at this point, to we can use writeShellScript now.
-      ExecStart = ${pkgs.writeShellScript "execstartpost-script" ''
-        ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
-      ''}
+      ExecStart = ${registerStorePaths}
 
       [Install]
       WantedBy = multi-user.target
+
     '';
+  # Careful since we do not have the nix store yet when this service runs,
+  # so we cannot use pkgs.writeTest or pkgs.writeShellScript for instance,
+  # since their results would refer to the store
+  mountStore = pkgs.writeText "mount-store.service" ''
+    [Service]
+    Type = oneshot
+    User = root
+    ExecStart = mkdir -p /nix/.ro-store
+    ExecStart = mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store
+    ExecStart = mkdir -p -m 0755 /nix/.rw-store/ /nix/store
+    ExecStart = mount -t tmpfs tmpfs /nix/.rw-store
+    ExecStart = mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work
+    ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
+
+    [Install]
+    WantedBy = multi-user.target
+  '';
+
+  backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
+    set -euo pipefail
+
+    ProtectSystem=false
+    export USER=root
+    export HOME=/root
+    export DISPLAY=:0.0
+
+    # TODO: do we actually need to source /etc/profile ?
+    # Unbound vars cause the service to crash
+    #source /etc/profile
+
+    # Don't use a pager when executing backdoor
+    # actions. Because we use a tty, commands like systemctl
+    # or nix-store get confused into thinking they're running
+    # interactively.
+    export PAGER=
+
+    cd /tmp
+    exec < /dev/hvc0 > /dev/hvc0
+    while ! exec 2> /dev/ttyS0; do sleep 0.1; done
+    echo "connecting to host..." >&2
+    stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
+    # This line is essential since it signals to the test driver that the
+    # shell is ready.
+    # See: the connect method in the Machine class.
+    echo "Spawning backdoor root shell..."
+    # Passing the terminal device makes bash run non-interactively.
+    # Otherwise we get errors on the terminal because bash tries to
+    # setup things like job control.
+    PS1= exec /usr/bin/env bash --norc /dev/hvc0
+  '';
 
   # Backdoor service that exposes a root shell through a socket to the test instrumentation framework
-  backdoor = { pkgs }:
+  backdoor =
     pkgs.writeText "backdoor.service" ''
       [Unit]
       Requires = dev-hvc0.device dev-ttyS0.device mount-store.service
@@ -44,37 +92,7 @@ rec {
       IgnoreOnIsolate = true
 
       [Service]
-      ExecStart = ${pkgs.writeShellScript "backdoor-start-script" ''
-        set -euo pipefail
-
-        export USER=root
-        export HOME=/root
-        export DISPLAY=:0.0
-
-        # TODO: do we actually need to source /etc/profile ?
-        # Unbound vars cause the service to crash
-        #source /etc/profile
-
-        # Don't use a pager when executing backdoor
-        # actions. Because we use a tty, commands like systemctl
-        # or nix-store get confused into thinking they're running
-        # interactively.
-        export PAGER=
-
-        cd /tmp
-        exec < /dev/hvc0 > /dev/hvc0
-        while ! exec 2> /dev/ttyS0; do sleep 0.1; done
-        echo "connecting to host..." >&2
-        stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
-        # This line is essential since it signals to the test driver that the
-        # shell is ready.
-        # See: the connect method in the Machine class.
-        echo "Spawning backdoor root shell..."
-        # Passing the terminal device makes bash run non-interactively.
-        # Otherwise we get errors on the terminal because bash tries to
-        # setup things like job control.
-        PS1= exec /usr/bin/env bash --norc /dev/hvc0
-      ''}
+      ExecStart = ${backdoorScript}
       KillSignal = SIGHUP
 
       [Install]
