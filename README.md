@@ -1,21 +1,28 @@
 # Nix-Vm-Test
 
-Re-use the NixOS VM test infrastructure to test Ubuntu, Debian, and Fedora machines.
+Use the NixOS VM test infrastructure to test Ubuntu, Debian, and Fedora machines.
 
-The API is very WIP/unstable, do not expect much stability for now.
+<p align="center">
+  <a href="doc/getting-started.md">Getting Started</a> - <a href="doc/reference.md">Reference Documentation</a>
+</p>
 
-## Usage
+## Example
 
 ```nix
 let
   test = nix-vm-test.lib.ubuntu."23_04" {
-    sharedDirs = {};
+    diskSize = "+2M"
+    sharedDirs = {
+      numtideShare = {
+        source = "/home/numtide/share";
+        target = "/mnt";
+      };
+    };
     testScript = ''
       vm.wait_for_unit("multi-user.target")
+      vm.succeed("apt-get update")
     '';
     };
 in test.sandboxed
 }
 ```
-
-This is very WIP, we did not write a proper documentation for this. In the meantime, don't hesitate to check out the [test](tests) directory for more examples.
