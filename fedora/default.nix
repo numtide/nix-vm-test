@@ -6,8 +6,8 @@ let
     url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, name, sharedDirs, diskSize ? null }: generic.makeVmTest {
-    inherit system testScript name sharedDirs;
+  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null }: generic.makeVmTest {
+    inherit system testScript sharedDirs;
     image = prepareFedoraImage {
       inherit diskSize;
       hostPkgs = pkgs;

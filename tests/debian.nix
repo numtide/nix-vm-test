@@ -14,10 +14,9 @@ let
     lib.debian.images;
 in {
   resizeImage = lib.debian."13" {
-    name = "test_debian_size";
     sharedDirs = {};
     testScript = ''
-      test_debian_size.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
   };
@@ -32,7 +31,6 @@ in {
       echo "hello2" > $out/somefile2
     '';
   in lib.debian."13" {
-    name = "shared_dir_test";
     sharedDirs = {
       dir1 = {
         source = "${dir1}";
@@ -44,10 +42,10 @@ in {
       };
     };
     testScript = ''
-      shared_dir_test.wait_for_unit("multi-user.target")
-      shared_dir_test.succeed('ls /tmp/dir1')
-      shared_dir_test.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
-      shared_dir_test.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('ls /tmp/dir1')
+      vm.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
+      vm.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
     '';
   };
 } //

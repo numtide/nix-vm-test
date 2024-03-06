@@ -8,11 +8,10 @@ The API is very WIP/unstable, do not expect much stability for now.
 
 ```nix
 nix-vm-test.lib.ubuntu."23_04" {
-  name = "example";
   sharedDirs = {
   };
   testScript = ''
-    example.wait_for_unit("multi-user.target")
+    vm.wait_for_unit("multi-user.target")
   '';
   };
 }

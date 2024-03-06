@@ -15,7 +15,6 @@ let
     lib.ubuntu.images;
 in {
   resizeImage = lib.ubuntu."23_04" {
-    name = "test_ubuntu_size";
     sharedDirs = {};
     testScript = ''
       test_ubuntu_size.wait_for_unit("multi-user.target")
@@ -33,7 +32,6 @@ in {
       echo "hello2" > $out/somefile2
     '';
   in lib.ubuntu."23_04" {
-    name = "shared_dir_test";
     sharedDirs = {
       dir1 = {
         source = "${dir1}";

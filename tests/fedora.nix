@@ -2,10 +2,9 @@
 let
   lib = package.${system};
   multiUserTest = runner: runner {
-    name = "multiuser";
     sharedDirs = {};
     testScript = ''
-      multiuser.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
   };
   runTestOnEveryImage = name: test:
@@ -14,10 +13,9 @@ let
     lib.fedora.images;
 in {
   resizeImage = lib.fedora."39" {
-    name = "test_fedora_size";
     sharedDirs = {};
     testScript = ''
-      test_fedora_size.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
   };
@@ -32,7 +30,6 @@ in {
       echo "hello2" > $out/somefile2
     '';
   in lib.fedora."39" {
-    name = "shared_dir_test";
     sharedDirs = {
       dir1 = {
         source = "${dir1}";
@@ -44,10 +41,10 @@ in {
       };
     };
     testScript = ''
-      shared_dir_test.wait_for_unit("multi-user.target")
-      shared_dir_test.succeed('ls /tmp/dir1')
-      shared_dir_test.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
-      shared_dir_test.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('ls /tmp/dir1')
+      vm.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
+      vm.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
     '';
   };
 } //
