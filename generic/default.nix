@@ -1,8 +1,7 @@
 { lib, pkgs, nixpkgs }:
 rec {
-  defaultMachineConfigModule = name: { ... }: {
+  defaultMachineConfigModule = { ... }: {
     nodes = {
-      vm.system.name = name;
     };
   };
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
@@ -115,8 +114,7 @@ rec {
     , image
     , testScript
     , sharedDirs
-    , machineConfigModule ? (defaultMachineConfigModule name)
-    , name
+    , machineConfigModule ? defaultMachineConfigModule
     }:
     let
       hostPkgs = pkgs;
@@ -137,7 +135,7 @@ rec {
         ${lib.concatStringsSep "\n"
         (lib.mapAttrsToList
         (tag: share:
-        "${name}.succeed('mkdir -p ${share.target} && mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} ${tag} ${share.target}')")
+        "vm.succeed('mkdir -p ${share.target} && mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} ${tag} ${share.target}')")
         sharedDirs)}
       '' + testScript;
 
@@ -160,7 +158,7 @@ rec {
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
-      in hostPkgs.writeShellScript "run-${node.system.name}-vm"
+      in hostPkgs.writeShellScript "run-vm-vm"
          ''
           set -eo pipefail
 
@@ -184,7 +182,7 @@ rec {
             "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
             "-device virtio-rng-pci"
             "-cpu max"
-            "-name ${node.system.name}"
+            "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
             "-drive file=${image},format=qcow2"
@@ -218,7 +216,7 @@ rec {
       };
     in
     hostPkgs.stdenv.mkDerivation {
-      inherit name;
+      name = "vm-test";
 
       requiredSystemFeatures = [ "kvm" "nixos-test" ];
 

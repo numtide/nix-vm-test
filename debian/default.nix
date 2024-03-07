@@ -6,8 +6,8 @@ let
     url = "https://cloud.debian.org/images/cloud/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, name, sharedDirs, diskSize ? null }: generic.makeVmTest {
-    inherit system testScript name sharedDirs;
+  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null }: generic.makeVmTest {
+    inherit system testScript sharedDirs;
     image = prepareDebianImage {
       inherit diskSize;
       hostPkgs = pkgs;

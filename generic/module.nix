@@ -11,11 +11,6 @@ let
 
   nodeOptions = { config, name, ... }: {
     options = {
-      system.name = lib.mkOption {
-        type = types.str;
-        default = name;
-      };
-
       virtualisation = {
         rootImage = lib.mkOption {
           type = types.package;
