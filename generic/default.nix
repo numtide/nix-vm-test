@@ -158,7 +158,7 @@ rec {
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
-      in hostPkgs.writeShellScript "run-vm"
+      in hostPkgs.writeShellScript "run-vm-vm"
          ''
           set -eo pipefail
 
