@@ -3,13 +3,12 @@
 let
   lib = package.${system};
   multiUserTest = runner: runner {
-    name = "multiuser";
     sharedDirs = {};
     testScript = ''
-      multiuser.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
   };
-  runTestOnEveryImage = name: test:
+  runTestOnEveryImage = test:
     pkgs.lib.mapAttrs'
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.ubuntu.${n}))
     lib.ubuntu.images;
@@ -17,7 +16,7 @@ in {
   resizeImage = lib.ubuntu."23_04" {
     sharedDirs = {};
     testScript = ''
-      test_ubuntu_size.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
   };
@@ -43,13 +42,13 @@ in {
       };
     };
     testScript = ''
-      shared_dir_test.wait_for_unit("multi-user.target")
-      shared_dir_test.succeed('ls /tmp/dir1')
-      shared_dir_test.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
-      shared_dir_test.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('ls /tmp/dir1')
+      vm.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
+      vm.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
     '';
   };
 
 }
 // package.${system}.ubuntu.images
-// runTestOnEveryImage "multiusertest" multiUserTest
+// runTestOnEveryImage multiUserTest

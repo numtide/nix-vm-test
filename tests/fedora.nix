@@ -7,7 +7,7 @@ let
       vm.wait_for_unit("multi-user.target")
     '';
   };
-  runTestOnEveryImage = name: test:
+  runTestOnEveryImage = test:
     pkgs.lib.mapAttrs'
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.fedora.${n}))
     lib.fedora.images;
@@ -48,5 +48,5 @@ in {
     '';
   };
 } //
-runTestOnEveryImage "multiusertest" multiUserTest //
+runTestOnEveryImage multiUserTest //
 package.${system}.fedora.images

@@ -135,7 +135,7 @@ rec {
         ${lib.concatStringsSep "\n"
         (lib.mapAttrsToList
         (tag: share:
-        "$vm.succeed('mkdir -p ${share.target} && mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} ${tag} ${share.target}')")
+        "vm.succeed('mkdir -p ${share.target} && mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} ${tag} ${share.target}')")
         sharedDirs)}
       '' + testScript;
 
@@ -216,6 +216,7 @@ rec {
       };
     in
     hostPkgs.stdenv.mkDerivation {
+      name = "vm-test";
 
       requiredSystemFeatures = [ "kvm" "nixos-test" ];
 

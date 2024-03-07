@@ -2,13 +2,12 @@
 let
   lib = package.${system};
   multiUserTest = runner: runner {
-    name = "multiuser";
     sharedDirs = {};
     testScript = ''
-      multiuser.wait_for_unit("multi-user.target")
+      vm.wait_for_unit("multi-user.target")
     '';
   };
-  runTestOnEveryImage = name: test:
+  runTestOnEveryImage = test:
     pkgs.lib.mapAttrs'
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.debian.${n}))
     lib.debian.images;
@@ -49,5 +48,5 @@ in {
     '';
   };
 } //
-runTestOnEveryImage "multiusertest" multiUserTest //
+runTestOnEveryImage multiUserTest //
 package.${system}.debian.images
