@@ -1,24 +1,24 @@
 { pkgs, package, system }:
 let
   lib = package.${system};
-  multiUserTest = runner: runner {
+  multiUserTest = runner: (runner {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
     '';
-  };
+  }).sandboxed;
   runTestOnEveryImage = test:
     pkgs.lib.mapAttrs'
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.debian.${n}))
     lib.debian.images;
 in {
-  resizeImage = lib.debian."13" {
+  resizeImage = (lib.debian."13" {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
-  };
+  }).sandboxed;
 
   sharedDirTest = let
     dir1 = pkgs.runCommandNoCC "dir1" {} ''

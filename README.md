@@ -7,13 +7,14 @@ The API is very WIP/unstable, do not expect much stability for now.
 ## Usage
 
 ```nix
-nix-vm-test.lib.ubuntu."23_04" {
-  sharedDirs = {
-  };
-  testScript = ''
-    vm.wait_for_unit("multi-user.target")
-  '';
-  };
+let
+  test = nix-vm-test.lib.ubuntu."23_04" {
+    sharedDirs = {};
+    testScript = ''
+      vm.wait_for_unit("multi-user.target")
+    '';
+    };
+in test.sandboxed
 }
 ```
 
