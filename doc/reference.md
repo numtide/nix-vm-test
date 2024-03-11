@@ -108,7 +108,6 @@ Where:
 
 | Attribute Name | Description                                                                                                                                              | Example |
 |----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| name           | VM name. ⚠️ it has to be a valid Python variable name. IE, it can't contain `_` or any other special character.                                          | vm      |
 | diskSize       | Resize the guest root partition to a new size. That size can be either absolute (EG. `2G`, `800M`) or relative to the original size (EG. `+500M`, `+2G`) | +2G     |
 | sharedDirs     | This attribute set describes the host directories that will be mounted to the guest filesystem. `source` being the host directory, `target` being the path we want to mount the directory on the VM. |  See above example |
 | testScript     | Python script used to orchestrate the integration test. You can have a look at the [relevant NixOS manual section](https://nixos.org/manual/nixos/stable/#ssec-machine-objects) to get the reference documentation of the available symbols. | See above example |
