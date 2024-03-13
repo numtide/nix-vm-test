@@ -7,7 +7,7 @@ In this getting started tutorial, we create a VM test in charge of installing th
 To follow this tutorial, you'll need:
 
 1. A **Linux** system with Nix installed on top of it. See [this page](https://zero-to-nix.com/start/install) to see how to install Nix on your system.
-2. Enabling the hardware KVM acceleration on your system. Without hardware acceleration, the VM tests will likely be unbearably slow to run. This is usually done on your computer through UEFI menu settings.
+2. Hardware KVM acceleration ennabled on your system. Without hardware acceleration, the VM tests will likely be unbearably slow to run. This is usually done on your computer through UEFI menu settings.
 
 You can check whether you have hardware-accelerated KVM support using the following command:
 
@@ -118,7 +118,7 @@ Let's edit the `flake.nix` file to add a new test. Don't worry, you don't have t
 }
 ```
 
-Copy this snippet to your `flake.nix` file.
+Copy this snippet to replace the contents of your `flake.nix` file.
 
 Before running anything, let's examine this snippet in smaller bits:
 
@@ -150,7 +150,7 @@ testScript = ''
 
 This is a Python script used to specify the commands we should run in the VM for the test. Two commands are used:
 
-- `wait_for_unit("multi-user.target")`: this command will make the test runner to wait for the systemd unit `multi-user.target` to be activated. `multi-user.target` is activated when all the services required for a functional non-graphical multi-user system are started. It's a proxy for "wait until the machine fully booted" as far as we are concerned.
+- `wait_for_unit("multi-user.target")`: this command will cause the test runner to wait for the systemd unit `multi-user.target` to be activated. `multi-user.target` is activated when all the services required for a functional non-graphical multi-user system are started. It's a proxy for "wait until the machine fully booted" as far as we are concerned.
 - `succeed("apt-get -yq install /mnt/debdir/hello.deb")` executes the `apt-get -yq install /mnt/debdir/hello.deb` command and verify it did succeed.
 
 Finally, we have:
