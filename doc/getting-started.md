@@ -9,7 +9,7 @@ To follow this tutorial, you'll need:
 1. A **Linux** system with Nix installed on top of it. See [this page](https://zero-to-nix.com/start/install) to see how to install Nix on your system.
 2. Enabling the hardware KVM acceleration on your system. Without hardware acceleration, the VM tests will likely be unbearably slow to run. This is usually done on your computer through UEFI menu settings.
 
-You can check the hardware-accelerated KVM support using:
+You can check whether you have hardware-accelerated KVM support using the following command:
 
 ```sh
 $ LC_ALL=C.UTF-8 lscpu | grep Virtualization
@@ -17,9 +17,11 @@ $ LC_ALL=C.UTF-8 lscpu | grep Virtualization
 
 This command should output something if hardware-accelerated KVM is enabled on your system, nothing if it's not.
 
+For more information about whether your processor supports hardware-accelerated KVM, and if so, hw to enable it, see [this article](https://www.speaknetworks.com/enable-intel-vt-amd-v-support-hardware-accelerated-kvm-virtualization-extensions/)
+
 ## Setting up the Project
 
-First, we're going to create a new directory in which we'll set up this new project and create an empty git repository in it.
+First, we're going to create a new directory for this project, and create an empty git repository inside it. This example puts the project under /tmp, but you may want to put it somewhere else if you want to keep it.
 
 ```sh
 $ cd /tmp
