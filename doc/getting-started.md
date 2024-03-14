@@ -7,9 +7,9 @@ In this getting started tutorial, we create a VM test in charge of installing th
 To follow this tutorial, you'll need:
 
 1. A **Linux** system with Nix installed on top of it. See [this page](https://zero-to-nix.com/start/install) to see how to install Nix on your system.
-2. Enabling the hardware KVM acceleration on your system. Without hardware acceleration, the VM tests will likely be unbearably slow to run. This is usually done on your computer through UEFI menu settings.
+2. Hardware KVM acceleration enabled on your system. Without hardware acceleration, the VM tests will likely be unbearably slow to run. This is usually done on your computer through UEFI menu settings.
 
-You can check the hardware-accelerated KVM support using:
+You can check whether you have hardware-accelerated KVM support using the following command:
 
 ```sh
 $ LC_ALL=C.UTF-8 lscpu | grep Virtualization
@@ -17,9 +17,11 @@ $ LC_ALL=C.UTF-8 lscpu | grep Virtualization
 
 This command should output something if hardware-accelerated KVM is enabled on your system, nothing if it's not.
 
+For more information about whether your processor supports hardware-accelerated KVM, and if so, how to enable it, see [this article](https://www.speaknetworks.com/enable-intel-vt-amd-v-support-hardware-accelerated-kvm-virtualization-extensions/)
+
 ## Setting up the Project
 
-First, we're going to create a new directory in which we'll set up this new project and create an empty git repository in it.
+First, we're going to create a new directory for this project, and create an empty git repository inside it. This example puts the project under /tmp, but you may want to put it somewhere else if you want to keep it.
 
 ```sh
 $ cd /tmp
@@ -36,7 +38,7 @@ Let's create an empty Nix flake:
 $ nix flake init
 ```
 
-You now should have a `flake.nix` file in the current directory.
+You should now have a `flake.nix` file in the current directory.
 
 Let's edit this flake to add `nix-vm-tests` in its inputs:
 
@@ -116,7 +118,7 @@ Let's edit the `flake.nix` file to add a new test. Don't worry, you don't have t
 }
 ```
 
-Copy this snippet to your `flake.nix` file.
+Copy this snippet to replace the contents of your `flake.nix` file.
 
 Before running anything, let's examine this snippet in smaller bits:
 
@@ -148,7 +150,7 @@ testScript = ''
 
 This is a Python script used to specify the commands we should run in the VM for the test. Two commands are used:
 
-- `wait_for_unit("multi-user.target")`: this command will make the test runner to wait for the systemd unit `multi-user.target` to be activated. `multi-user.target` is activated when all the services required for a functional non-graphical multi-user system are started. It's a proxy for "wait until the machine fully booted" as far as we are concerned.
+- `wait_for_unit("multi-user.target")`: this command will cause the test runner to wait for the systemd unit `multi-user.target` to be activated. `multi-user.target` is activated when all the services required for a functional non-graphical multi-user system are started. It's a proxy for "wait until the machine fully booted" as far as we are concerned.
 - `succeed("apt-get -yq install /mnt/debdir/hello.deb")` executes the `apt-get -yq install /mnt/debdir/hello.deb` command and verify it did succeed.
 
 Finally, we have:
@@ -166,15 +168,21 @@ $ nix build .# -L
 $ ./result/bin/test-driver
 ```
 
-You should see an interactive Python console opening in your terminal. This console is the interactive test runner. The list of the available top-level symbols should be printed just before the prompt.
+You should see an interactive Python console opening in your terminal. This console is the interactive test runner. The list of the available top-level symbols should be printed just before the prompt. The console should look like this:
+
+![](images/interactive.png)
 
 Type `vm.` in the prompt. An autocomplete popup should appear and show you the available operations to control the VM.
 
 Clear the prompt and type `run_tests()`, then press enter.
 
-A new qemu window should open. This window displays a terminal to the VM we just started. In the meantime, the test scenario is played in the test runner terminal.
+A new qemu window should open. This window displays a terminal to the VM we just started. The terminal should look like this:
 
-The test should succeed, in the test runner terminal, you should get those two final lines:
+![](images/terminal.png)
+
+In the meantime, the test scenario is played in the test runner terminal.
+
+The test should succeed. In the test runner terminal, you should get those two final lines:
 
 ```
 (finished: must succeed: apt-get -yq install /mnt/debdir/hello.deb, in 2.63 seconds)
@@ -182,6 +190,8 @@ The test should succeed, in the test runner terminal, you should get those two f
 ```
 
 and a new prompt.
+
+If the test had failed, you would have seen an error message followed by "Test failed."
 
 NICE! It seems like our test succeeded on the first try. How lucky! 😉
 
@@ -200,6 +210,8 @@ Hello, world!
 ```
 
 Nice! It seems it's been correctly installed.
+
+You can now type CTRL-D to exit the test runner. This will kill the test VM and release any disk space belonging to it.
 
 Mhhh, this sounds like a convenient extra check to add to our test scenario! Let's edit the test in the `flake.nix` file and add a check making sure the `hello` command is there:
 
