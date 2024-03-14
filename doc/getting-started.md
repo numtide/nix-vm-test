@@ -17,7 +17,7 @@ $ LC_ALL=C.UTF-8 lscpu | grep Virtualization
 
 This command should output something if hardware-accelerated KVM is enabled on your system, nothing if it's not.
 
-For more information about whether your processor supports hardware-accelerated KVM, and if so, hw to enable it, see [this article](https://www.speaknetworks.com/enable-intel-vt-amd-v-support-hardware-accelerated-kvm-virtualization-extensions/)
+For more information about whether your processor supports hardware-accelerated KVM, and if so, how to enable it, see [this article](https://www.speaknetworks.com/enable-intel-vt-amd-v-support-hardware-accelerated-kvm-virtualization-extensions/)
 
 ## Setting up the Project
 
@@ -38,7 +38,7 @@ Let's create an empty Nix flake:
 $ nix flake init
 ```
 
-You now should have a `flake.nix` file in the current directory.
+You should now have a `flake.nix` file in the current directory.
 
 Let's edit this flake to add `nix-vm-tests` in its inputs:
 
@@ -168,15 +168,21 @@ $ nix build .# -L
 $ ./result/bin/test-driver
 ```
 
-You should see an interactive Python console opening in your terminal. This console is the interactive test runner. The list of the available top-level symbols should be printed just before the prompt.
+You should see an interactive Python console opening in your terminal. This console is the interactive test runner. The list of the available top-level symbols should be printed just before the prompt. The console should look like this:
+
+![](images/interactive.png)
 
 Type `vm.` in the prompt. An autocomplete popup should appear and show you the available operations to control the VM.
 
 Clear the prompt and type `run_tests()`, then press enter.
 
-A new qemu window should open. This window displays a terminal to the VM we just started. In the meantime, the test scenario is played in the test runner terminal.
+A new qemu window should open. This window displays a terminal to the VM we just started. The terminal should look like this:
 
-The test should succeed, in the test runner terminal, you should get those two final lines:
+![](images/terminal.png)
+
+In the meantime, the test scenario is played in the test runner terminal.
+
+The test should succeed. In the test runner terminal, you should get those two final lines:
 
 ```
 (finished: must succeed: apt-get -yq install /mnt/debdir/hello.deb, in 2.63 seconds)
@@ -184,6 +190,8 @@ The test should succeed, in the test runner terminal, you should get those two f
 ```
 
 and a new prompt.
+
+If the test had failed, you would have seen an error message followed by "Test failed."
 
 NICE! It seems like our test succeeded on the first try. How lucky! 😉
 
@@ -202,6 +210,8 @@ Hello, world!
 ```
 
 Nice! It seems it's been correctly installed.
+
+You can now type CTRL-D to exit the test runner. This will kill the test VM and release any disk space belonging to it.
 
 Mhhh, this sounds like a convenient extra check to add to our test scenario! Let's edit the test in the `flake.nix` file and add a check making sure the `hello` command is there:
 
