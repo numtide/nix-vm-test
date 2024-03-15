@@ -18,7 +18,7 @@ Testing your project on different Linux distributions is essential, but time-con
 
 ## Overview
 
-This project builds on the [NIXOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, and Fedora virtual machines.
+This project builds on the [NixOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, and Fedora virtual machines.
 
 It runs on any Linux machine with Nix installed.
 
@@ -43,7 +43,7 @@ You configure **nix-vm-test** using Nix package manager, either in a flake or in
 
 ## How to use nix-vm-test
 
-The [Get Started](doc/getting-started.md) guide walks you through setting up and running a simple test scenario. 
+The [Get Started](doc/getting-started.md) guide walks you through setting up and running a simple test scenario.
 
 For more detailed information, see the [Reference](doc/reference.md) guide.
 
