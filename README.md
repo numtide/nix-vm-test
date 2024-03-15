@@ -1,21 +1,53 @@
-# Nix-Vm-Test
+# nix-vm-test
 
-Use the NixOS VM test infrastructure to test Ubuntu, Debian, and Fedora machines.
+----
 
------
+*Instant VMs to test your project*
 
-You can use this project to write some integration VM tests. These tests can be either be used:
+<img title="" src="doc/images/DebianFedoraUbuntu.jpg" alt="" width="218">
+
+[Get Started](doc/getting-started.md)          [Reference](doc/reference.md)
+
+----------
+
+# README
+
+Testing your project on different Linux distributions is essential, but time-consuming.
+
+**nix-vm-test** allows you to quickly spin up a virtual machine running any of the three major Linux distributions and run your tests using a single CLI command.
+
+## Overview
+
+This project builds on the [NIXOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, and Fedora virtual machines.
+
+It runs on any Linux machine with Nix installed.
+
+Your tests can either be used:
 
 - interactively, for development purposes.
-- noninteractively, on CI, and used as an integration test matrix on a wide variety of Linux distributions.
+- noninteractively. This is perfect for CI, and you can use it as an integration test matrix on a wide variety of Linux distributions.
+
+You configure **nix-vm-test** using Nix package manager, either in a flake or in a `.nix` configuration. This includes defining the parameters of the virtual machine you need for the test, and writing a Python script to define your tests. Once you've built the project, you can create the virtual machine and run your tests with a single CLI command.
 
 -----
 
-<p align="center">
-  <a href="doc/getting-started.md">Getting Started</a> - <a href="doc/reference.md">Reference Documentation</a>
-</p>
+## Prerequisites
+
+- A Linux machine
+
+- Nix Package Manager
+
+- Hardware KVM acceleration. The project will run without it, but it will be too slow for practical purposes.
 
 -----
+
+## How to use nix-vm-test
+
+The [Get Started](doc/getting-started.md) guide walks you through setting up and running a simple test scenario. 
+
+For more detailed information, see the [Reference](doc/reference.md) guide.
+
+----
 
 ## Status of the Project
 
@@ -45,3 +77,21 @@ let
 in test.sandboxed
 }
 ```
+
+---
+
+This project is supported by [Numtide](https://numtide.com/).
+<img src="doc/images/numtide.png" title="" alt="Untitledpng" width="274">
+
+We are a team of independent freelancers that love open source.  We help our
+customers make their project lifecycles more efficient by:
+
+- Providing and supporting useful tools such as this one
+- Building and deploying infrastructure, and offering dedicated DevOps support
+- Building their in-house Nix skills, and integrating Nix with their workflows
+- Developing additional features and tools
+- Carrying out custom research and development.
+
+[Contact us](https://numtide.com/contact) if you have a project in mind, or if
+you need help with any of our supported tools, including this one. We'd love to
+hear from you.
