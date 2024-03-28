@@ -169,6 +169,21 @@ rec {
             TMPDIR=$(mktemp -d nix-vm.XXXXXXXXXX --tmpdir)
           fi
 
+          # Associative array containing the absolute mount points for
+          # all the shares.
+          #
+          # We absolutely need to resolve the relative paths using
+          # $rundir as a root. $rundir is the directory in which
+          # the test driver has been started (variable set by runTest).
+          pushd "''${rundir}"
+          declare -A abs_mnt_paths
+          ${lib.concatStringsSep "\\\n "
+            (lib.mapAttrsToList
+              (tag: share: "abs_mnt_paths[\"${tag}\"]=\"$(realpath \"${share.source}\")\"")
+            node.virtualisation.sharedDirectories)
+          }
+          popd
+
           # Create a directory for exchanging data with the VM.
           mkdir -p "$TMPDIR/xchg"
 
@@ -191,7 +206,7 @@ rec {
             "-virtfs local,security_model=passthrough,id=fsdev1,path=/nix/store,readonly=on,mount_tag=nix-store"
             (lib.concatStringsSep "\\\n  "
               (lib.mapAttrsToList
-                (tag: share: "-virtfs local,path=${share.source},security_model=none,mount_tag=${tag}")
+              (tag: share: "-virtfs local,path=\"\${abs_mnt_paths[\"${tag}\"]}\",security_model=none,mount_tag=${tag}")
                   node.virtualisation.sharedDirectories))
             "-snapshot"
             (lib.optionalString (!interactive) "-nographic")
@@ -203,6 +218,9 @@ rec {
       test-driver = hostPkgs.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
 
       runTest = { nodes, vlans, interactive }: ''
+        # Exporting the current directory. The start script need it to
+        # resolve the relative mount points.
+        export rundir="$(pwd)"
         ${lib.getBin test-driver}/bin/nixos-test-driver \
         ${lib.optionalString interactive "--interactive"} \
         --start-scripts ${lib.concatStringsSep " " (nodes interactive)} \
