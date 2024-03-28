@@ -16,8 +16,10 @@ jobs:
       - name: Run update-images.py
         run: |
           scripts/update-images.py
-          cat debian.json | jq -S > debian/images.json
-          rm debian.json
+          for distro in ubuntu debian; do
+            cat "$distro".json | jq -S > "$distro"/images.json
+            rm "$distro".json
+          done
           if [[ -z $(git status -s) ]]; then
             echo "Images up to date"
             exit 0
@@ -29,6 +31,7 @@ jobs:
             branchname="update-images-$(date +%F)"
             git checkout -b "${branchname}"
             git add debian/images.json
+            git add ubuntu/images.json
             git commit -m "Update images: $(date +%F)"
             git push origin "${branchname}"
             gh pr create -B main -H "${branchname}" \
