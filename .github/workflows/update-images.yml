@@ -22,17 +22,18 @@ jobs:
             echo "Images up to date"
             exit 0
           else
+            echo "New image"
+            git diff
             git config user.name github-actions
             git config user.email github-actions@github.com
-            git checkout -b update-images-$(date +%F)
+            branchname="update-images-$(date +%F)"
+            git checkout -b "${branchname}"
             git add debian/images.json
             git commit -m "Update images: $(date +%F)"
-            git push
+            git push origin "${branchname}"
+            gh pr create -B main -H "${branchname}" \
+              --title 'Bump images.json' \
+              --body 'PR generated using scripts/update-images.py'
           fi
-      - name: create pull request
-        run: |
-          gh pr create -B main -H update-images-$(date +%F) \
-            --title 'Bump images.json' \
-            --body 'PR generated using scripts/update-images.py'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
