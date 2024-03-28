@@ -2,8 +2,8 @@
 let
   imagesJSON = lib.importJSON ./images.json;
   fetchImage = image: pkgs.fetchurl {
-    inherit (image) hash;
-    url = "https://cloud-images.ubuntu.com/releases/${image.releaseName}/release-${image.releaseTimeStamp}/${image.name}";
+    sha256 = image.hash;
+    url = image.name;
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
   makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null }: generic.makeVmTest {
