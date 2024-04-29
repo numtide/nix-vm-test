@@ -232,24 +232,40 @@ rec {
         inherit interactive nodes;
         vlans = [ "1" ];
       };
-    in {
-      sandboxed = hostPkgs.stdenv.mkDerivation {
-        name = "vm-test";
-        requiredSystemFeatures = [ "kvm" "nixos-test" ];
-        buildCommand = ''
-          ${defaultTest {}}
-          touch $out
-        '';
-      };
 
-      driver = hostPkgs.writeShellScriptBin "test-driver"
-      (defaultTest {
-        interactive = false;
-      });
+      targets =
+        let
+          passthru = { inherit targets; };
+        in
+        {
+          sandboxed = hostPkgs.stdenv.mkDerivation {
+            name = "vm-test";
+            requiredSystemFeatures = [ "kvm" "nixos-test" ];
+            buildCommand = ''
+              ${defaultTest {}}
+              touch $out
+            '';
+            inherit passthru;
+          };
 
-      driverInteractive = hostPkgs.writeShellScriptBin "test-driver"
-      (defaultTest {
-        interactive = true;
-      });
+          driver = (hostPkgs.writeShellScriptBin "test-driver"
+            (defaultTest {
+              interactive = false;
+            })
+          ).overrideAttrs (prevAttrs: {
+            passthru = (prevAttrs.passthru or { }) // passthru;
+          });
+
+          driverInteractive = (hostPkgs.writeShellScriptBin "test-driver"
+            (defaultTest {
+              interactive = true;
+            })
+          ).overrideAttrs (prevAttrs: {
+            passthru = (prevAttrs.passthru or { }) // passthru;
+          });
+        };
+    in
+    {
+      inherit (targets) sandboxed driver driverInteractive;
     };
 }
