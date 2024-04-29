@@ -6,10 +6,10 @@ let
     url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null }: generic.makeVmTest {
+  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null, extraPathsToRegister ? [ ]}: generic.makeVmTest {
     inherit system testScript sharedDirs;
     image = prepareFedoraImage {
-      inherit diskSize;
+      inherit diskSize extraPathsToRegister;
       hostPkgs = pkgs;
       originalImage = image;
     };
@@ -39,11 +39,10 @@ let
       [Install]
       WantedBy = multi-user.target
     '';
-  prepareFedoraImage = { hostPkgs, originalImage, diskSize }:
+  prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
-      # The nix store paths that need to be added to the nix DB for this node.
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
       # We will modify the VM image, so we need a mutable copy
@@ -52,7 +51,7 @@ let
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
       cp ${backdoor} backdoor.service
-      cp ${generic.mountStore} mount-store.service
+      cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
       cp ${resizeService} resizeguest.service
       cp ${generic.backdoorScript} backdoorScript
 

@@ -6,47 +6,33 @@ rec {
   };
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
-
-  registerPaths = { pkgs, pathsToRegister }:
-  let
-    pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
-    registerStorePaths = pkgs.writeShellScript "execstartpost-script" ''
-      echo "hello?"
-      ls -l ${lib.getBin pkgs.nix}/bin/nix-store
-      ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
-    '';
+  # Careful since we do not have the nix store yet when this service runs,
+  # so we cannot use pkgs.writeText or pkgs.writeShellScript for instance,
+  # since their results would refer to the store
+  mountStore = { pathsToRegister ? [ ] }:
+    let
+      pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
-    pkgs.writeText "register-store-paths.service" ''
-      [Unit]
-      Requires = mount-store.service
+    pkgs.writeText "mount-store.service" ''
       [Service]
       Type = oneshot
-      ProtectSystem=false
+      User = root
+      ExecStart = mkdir -p /nix/.ro-store
+      ExecStart = mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store
+      ExecStart = mkdir -p -m 0755 /nix/.rw-store/ /nix/store
+      ExecStart = mount -t tmpfs tmpfs /nix/.rw-store
+      ExecStart = mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work
+      ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
+
       # Register the required paths in the nix DB.
       # The store has been mounted at this point, to we can use writeShellScript now.
-      ExecStart = ${registerStorePaths}
+      ExecStart = -${pkgs.writeShellScript "execstartpost-script" ''
+        ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
+      ''}
 
       [Install]
       WantedBy = multi-user.target
-
     '';
-  # Careful since we do not have the nix store yet when this service runs,
-  # so we cannot use pkgs.writeTest or pkgs.writeShellScript for instance,
-  # since their results would refer to the store
-  mountStore = pkgs.writeText "mount-store.service" ''
-    [Service]
-    Type = oneshot
-    User = root
-    ExecStart = mkdir -p /nix/.ro-store
-    ExecStart = mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store
-    ExecStart = mkdir -p -m 0755 /nix/.rw-store/ /nix/store
-    ExecStart = mount -t tmpfs tmpfs /nix/.rw-store
-    ExecStart = mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work
-    ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
-
-    [Install]
-    WantedBy = multi-user.target
-  '';
 
   backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
