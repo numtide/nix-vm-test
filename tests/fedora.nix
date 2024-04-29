@@ -12,13 +12,13 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.fedora.${n}))
     lib.fedora.images;
 in {
-  resizeImage = lib.fedora."39" {
+  resizeImage = (lib.fedora."39" {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
-  };
+  }).sandboxed;
 
   sharedDirTest = let
     dir1 = pkgs.runCommandNoCC "dir1" {} ''
