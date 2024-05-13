@@ -17,8 +17,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.04/release-20240115/ubuntu-23.04-server-cloudimg-arm64.img"
     },
     "23_10": {
-      "hash": "186naa3j8agq0rym40zk4kvy0s8wp49hzmc912rsvi1lkvpmlid8",
-      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240410/ubuntu-23.10-server-cloudimg-arm64.img"
+      "hash": "0db911k2b9jbfx0dw94w52h206cx5m00a1389c1z2ap3h795bs0h",
+      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240508/ubuntu-23.10-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
@@ -39,8 +39,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.04/release-20240115/ubuntu-23.04-server-cloudimg-amd64.img"
     },
     "23_10": {
-      "hash": "00lv3rypaxhfryds3bdl8709lav7rj44a7ifvrhrpc2i5lnh62my",
-      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240410/ubuntu-23.10-server-cloudimg-amd64.img"
+      "hash": "0r7vxrkxpln6d1b8d45m1y7yldj0sz1msqiwllqfrbgz50rq1a66",
+      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240508/ubuntu-23.10-server-cloudimg-amd64.img"
     }
   }
 }
