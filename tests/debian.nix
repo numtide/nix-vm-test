@@ -29,7 +29,7 @@ in {
       mkdir -p $out
       echo "hello2" > $out/somefile2
     '';
-  in lib.debian."13" {
+  in (lib.debian."13" {
     sharedDirs = {
       dir1 = {
         source = "${dir1}";
@@ -46,7 +46,7 @@ in {
       vm.succeed('test "$(cat /tmp/dir1/somefile1)" == "hello1"')
       vm.succeed('test "$(cat /tmp/dir2/somefile2)" == "hello2"')
     '';
-  };
+  }).sandboxed;
 } //
 runTestOnEveryImage multiUserTest //
 package.${system}.debian.images
