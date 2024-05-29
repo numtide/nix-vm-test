@@ -33,11 +33,11 @@ in {
   in (lib.ubuntu."23_04" {
     sharedDirs = {
       dir1 = {
-        source = "${dir1}";
+        source = dir1;
         target = "/tmp/dir1";
       };
       dir2 = {
-        source = "${dir2}";
+        source = dir2;
         target = "/tmp/dir2";
       };
     };

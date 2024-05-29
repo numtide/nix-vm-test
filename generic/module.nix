@@ -38,7 +38,7 @@ let
             (types.submodule {
               options = {
                 source = lib.mkOption {
-                  type = types.str;
+                  type = types.oneOf [ types.str types.path ];
                 };
                 target = lib.mkOption {
                   type = types.str;
