@@ -1,12 +1,12 @@
 {
   "aarch64-linux": {
     "20_04": {
-      "hash": "0p8xwwixxh5wc97kc9przvr7fv12xhly90yb57wd7bm5ca1xb3bw",
-      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240606/ubuntu-20.04-server-cloudimg-arm64.img"
+      "hash": "0y1065h9kwasb78dqw564bvga64xsfkjrv1y4yldq3c2l1xlqnjg",
+      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240612/ubuntu-20.04-server-cloudimg-arm64.img"
     },
     "22_04": {
-      "hash": "18wlx9pgmxdk8kdprdppi2xfaisp3z3isw1g5sddnaks402p7gzn",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240514/ubuntu-22.04-server-cloudimg-arm64.img"
+      "hash": "11c0yhlwwkzqfyablrf9l7zkcxxhrpahrd24pk8lb6zj1b3bp5pf",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240614/ubuntu-22.04-server-cloudimg-arm64.img"
     },
     "22_10": {
       "hash": "1ivc5i4pi7vvcz8df0srsy61323vw094flq2qkjn6hicdp00rpp6",
@@ -23,12 +23,12 @@
   },
   "x86_64-linux": {
     "20_04": {
-      "hash": "01b6z53mpb6y76h8qzkj6liwb29f1ky89w3n69qz8zmbxrkmh60h",
-      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240606/ubuntu-20.04-server-cloudimg-amd64.img"
+      "hash": "0ybz5sqzmdf6r4bgbvynsh6m0vl0z1bb0636qbcwvlmgr7v4kkkz",
+      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240612/ubuntu-20.04-server-cloudimg-amd64.img"
     },
     "22_04": {
-      "hash": "09dmckc3kcmvm3v6fib9m9fiy3215z7vvp5pi8a63i74vmvz260p",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240514/ubuntu-22.04-server-cloudimg-amd64.img"
+      "hash": "0lcvl84ncw922j7qifhf4nzkdxf22b3sniyma6cj7084dfjbdyqw",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240614/ubuntu-22.04-server-cloudimg-amd64.img"
     },
     "22_10": {
       "hash": "0yjn4j023psby3a17z8sh1030lyihnjysyagqn916vklpcrjgj34",
