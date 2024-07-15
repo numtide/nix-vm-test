@@ -1,8 +1,8 @@
 {
   "aarch64-linux": {
     "20_04": {
-      "hash": "1vf6gs727brz214mnb17hqfzd4vykfry7bwcn9w3k3wl4q9pyigm",
-      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240626/ubuntu-20.04-server-cloudimg-arm64.img"
+      "hash": "1gqvilyq2s0hyvdr0p883j0nw016l650ijxzra5wi3j4hxgvssij",
+      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240710/ubuntu-20.04-server-cloudimg-arm64.img"
     },
     "22_04": {
       "hash": "0m8iymrfkfzi0vvz8hldfpb4cz5hf9s0qq8pz8ax9pbzr52kjhkn",
@@ -17,14 +17,14 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.04/release-20240115/ubuntu-23.04-server-cloudimg-arm64.img"
     },
     "23_10": {
-      "hash": "1ai94813lblhhylaklaf50xbyb23j4hav9lrlc4f0nrkbbx47s4k",
-      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240701/ubuntu-23.10-server-cloudimg-arm64.img"
+      "hash": "16l9k6d0dgi1lib8rrxa610sy36kdmw962q8840wwiw8937w54rx",
+      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240710/ubuntu-23.10-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
     "20_04": {
-      "hash": "0im3hnm0s9dxf63ygb1kiffnskzznsiqkmmm4i4p1ysbnbjzgmyh",
-      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240626/ubuntu-20.04-server-cloudimg-amd64.img"
+      "hash": "0dqdyszy47bxgb480p0san3795h3xd9kifdsg4n463zq9q2gxqj8",
+      "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240710/ubuntu-20.04-server-cloudimg-amd64.img"
     },
     "22_04": {
       "hash": "1szf63nip98yk5yn675r73lalj3jh8d415pb38ji3x63miah77vn",
@@ -39,8 +39,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.04/release-20240115/ubuntu-23.04-server-cloudimg-amd64.img"
     },
     "23_10": {
-      "hash": "0gkz181ly8myw7l1bzsb52xmxifqdg3vaz1qzl7dc1xc7hsym5zm",
-      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240701/ubuntu-23.10-server-cloudimg-amd64.img"
+      "hash": "0dlx5zmky92yrdpqd1dijg3fb5587fgfx55hbaqnc4bvwp4vp5v5",
+      "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240710/ubuntu-23.10-server-cloudimg-amd64.img"
     }
   }
 }
