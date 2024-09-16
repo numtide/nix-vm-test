@@ -5,8 +5,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240821/ubuntu-20.04-server-cloudimg-arm64.img"
     },
     "22_04": {
-      "hash": "1c7qpdsm3k8xnsv1f7vbk9lqw06irp1s2r35xky5sh2zhcdla0ja",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240821/ubuntu-22.04-server-cloudimg-arm64.img"
+      "hash": "18gb82gswwwsfcmrxcwh679x62ggxnlj9shl1r8nrl9j7g4w3678",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240912/ubuntu-22.04-server-cloudimg-arm64.img"
     },
     "22_10": {
       "hash": "1ivc5i4pi7vvcz8df0srsy61323vw094flq2qkjn6hicdp00rpp6",
@@ -27,8 +27,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20240821/ubuntu-20.04-server-cloudimg-amd64.img"
     },
     "22_04": {
-      "hash": "0kc3bc01rpfldypi1smr5glppqz30c0x4cd64x91is7dapz7i6xn",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240821/ubuntu-22.04-server-cloudimg-amd64.img"
+      "hash": "0vaz2kpgivikj6rjv6xwqymhhkpi9ldh996ac1knrjh2gp9v782x",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20240912/ubuntu-22.04-server-cloudimg-amd64.img"
     },
     "22_10": {
       "hash": "0yjn4j023psby3a17z8sh1030lyihnjysyagqn916vklpcrjgj34",
