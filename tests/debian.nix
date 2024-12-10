@@ -1,6 +1,6 @@
 { pkgs, package, system }:
 let
-  lib = package.${system};
+  lib = package;
   multiUserTest = runner: (runner {
     sharedDirs = {};
     testScript = ''
@@ -49,4 +49,4 @@ in {
   }).sandboxed;
 } //
 runTestOnEveryImage multiUserTest //
-package.${system}.debian.images
+package.debian.images
