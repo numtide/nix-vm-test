@@ -5,11 +5,22 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = { self, nixpkgs, ... }: rec {
-    lib.x86_64-linux = import ./lib.nix {
-      inherit nixpkgs;
+  outputs = { self, nixpkgs, flake-utils }:
+    let
       system = "x86_64-linux";
+      pkgs = import nixpkgs {
+        overlays = [ self.overlays.default ];
+        localSystem = system;
+      };
+    in
+    {
+      lib.${system} = pkgs.testers.legacyDistros;
+
+      checks.${system} = import ./tests {
+        package = pkgs.testers.legacyDistros;
+        inherit pkgs system;
+      };
+
+      overlays.default = import ./overlay.nix;
     };
-    checks.x86_64-linux = import ./tests { package = lib; pkgs = nixpkgs.legacyPackages.x86_64-linux; system = "x86_64-linux"; };
-  };
 }
