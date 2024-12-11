@@ -1,7 +1,7 @@
 { pkgs, package, system }:
 
 let
-  lib = package.${system};
+  lib = package;
   multiUserTest = runner: (runner {
     sharedDirs = {};
     testScript = ''
@@ -50,5 +50,5 @@ in {
   }).sandboxed;
 
 }
-// package.${system}.ubuntu.images
+// package.ubuntu.images
 // runTestOnEveryImage multiUserTest
