@@ -53,6 +53,44 @@ in test.driver
 
 Note: For a real-world deployment, you would probably want to pin `Nixpkgs` to a particular version, instead of using the one coming from your host path.
 
+
+## Using a Nixpkgs Overlay
+
+There is one last option to use this library: via a Nixpkgs overlay.
+
+The overlay function makes all linux distributions available under the attribute
+`pkgs.testers.legacyDistros...`:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nix-vm-test.url = "github:numtide/nix-vm-test";
+  };
+
+  outputs = { self, nixpkgs, nix-vm-test }:
+   let
+     system = "x86_64-linux";
+     pkgs = import nixpkgs {
+       inherit system;
+       overlays = [
+         nix-vm-test.overlays.default
+       ];
+     };
+    in
+      packages.x86_64-linux.mytest = pkgs.testers.legacyDistros.debian."13" {
+        sharedDirs.debDir = {
+          source = "${./.}";
+          target = "/mnt/debdir";
+        };
+        testScript = ''
+          vm.wait_for_unit("multi-user.target")
+          vm.succeed("apt-get -yq install /mnt/debdir/hello.deb")
+        '';
+      };
+}
+```
+
 ## API
 
 ### Inputs
