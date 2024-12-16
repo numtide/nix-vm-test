@@ -10,7 +10,7 @@ in
 
 {
   testers = prev.testers or { } // {
-    nonNixOSDistros = {
+    nonNixOSDistros = prev.testers.nonNixOSDistros or {} // {
       inherit debian ubuntu fedora;
     };
   };
