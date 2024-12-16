@@ -5,7 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -14,10 +14,10 @@
       };
     in
     {
-      lib.${system} = pkgs.testers.nix-vm-test;
+      lib.${system} = pkgs.testers.nonNixOSDistros;
 
       checks.${system} = import ./tests {
-        package = pkgs.testers.nix-vm-test;
+        package = pkgs.testers.nonNixOSDistros;
         inherit pkgs system;
       };
 

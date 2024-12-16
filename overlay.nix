@@ -10,7 +10,7 @@ in
 
 {
   testers = prev.testers or { } // {
-    nix-vm-test = {
+    nonNixOSDistros = {
       inherit debian ubuntu fedora;
     };
   };
