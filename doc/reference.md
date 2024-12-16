@@ -59,7 +59,7 @@ Note: For a real-world deployment, you would probably want to pin `Nixpkgs` to a
 There is one last option to use this library: via a Nixpkgs overlay.
 
 The overlay function makes all linux distributions available under the attribute
-`pkgs.testers.legacyDistros...`:
+`pkgs.testers.nix-vm-test...`:
 
 ```nix
 {
@@ -78,7 +78,7 @@ The overlay function makes all linux distributions available under the attribute
        ];
      };
     in
-      packages.x86_64-linux.mytest = pkgs.testers.legacyDistros.debian."13" {
+      packages.x86_64-linux.mytest = pkgs.testers.nix-vm-test.debian."13" {
         sharedDirs.debDir = {
           source = "${./.}";
           target = "/mnt/debdir";

@@ -10,7 +10,7 @@ in
 
 {
   testers = prev.testers or { } // {
-    legacyDistros = {
+    nix-vm-test = {
       inherit debian ubuntu fedora;
     };
   };

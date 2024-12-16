@@ -14,10 +14,10 @@
       };
     in
     {
-      lib.${system} = pkgs.testers.legacyDistros;
+      lib.${system} = pkgs.testers.nix-vm-test;
 
       checks.${system} = import ./tests {
-        package = pkgs.testers.legacyDistros;
+        package = pkgs.testers.nix-vm-test;
         inherit pkgs system;
       };
 
