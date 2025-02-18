@@ -49,6 +49,14 @@ in {
     '';
   }).sandboxed;
 
+  sudoSameConsole = (lib.ubuntu."23_04" {
+    sharedDirs = {};
+    testScript = ''
+      # Ensure using sudo doesn't crash the test-driver
+      vm.execute("sudo bash -c \"echo 'Created foo → bar.\n' >&2 && echo 'foo' \"")
+    '';
+  }).sandboxed;
+
 }
 // package.ubuntu.images
 // runTestOnEveryImage multiUserTest

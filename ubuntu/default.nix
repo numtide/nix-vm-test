@@ -57,6 +57,19 @@ let
           systemctl mask snapd.socket
           systemctl mask snapd.seeded.service
 
+          # Disable TTY usage in sudo.
+          # Otherwise, using sudo spawns a new pty, causing the test-driver to
+          # receive mixed stdout and stderr when processing command output.
+          # The driver only expects base64-encoded stdout, so extra stderr data
+          # can break the output parsing.
+          mkdir -p /etc/sudoers.d
+          cat << EOF > /etc/sudoers.d/disable-pty
+          Defaults !requiretty
+          Defaults !use_pty
+          EOF
+          visudo -cf /etc/sudoers.d/disable-pty
+          chmod 440 /etc/sudoers.d/disable-pty
+
           # We have no network in the test VMs, avoid an error on bootup
           systemctl mask ssh.service
           systemctl mask ssh.socket
