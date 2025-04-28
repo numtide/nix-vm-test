@@ -93,11 +93,15 @@ def get_latest_ubuntu_image(url):
     return res
 
 def ubuntu_parse():
+    oracular_url = "https://cloud-images.ubuntu.com/releases/oracular/"
+    noble_url = "https://cloud-images.ubuntu.com/releases/noble/"
     mantic_url = "https://cloud-images.ubuntu.com/releases/23.10/"
     lunar_url = "https://cloud-images.ubuntu.com/releases/23.04/"
     kinetic_url = "https://cloud-images.ubuntu.com/releases/22.10/"
     jammy_url = "https://cloud-images.ubuntu.com/releases/22.04/"
     focal_url = "https://cloud-images.ubuntu.com/releases/focal/"
+    oracular = get_latest_ubuntu_image(oracular_url)
+    noble = get_latest_ubuntu_image(noble_url)
     mantic = get_latest_ubuntu_image(mantic_url)
     lunar = get_latest_ubuntu_image(lunar_url)
     kinetic = get_latest_ubuntu_image(kinetic_url)
@@ -114,6 +118,8 @@ def ubuntu_parse():
             "22_10": gen_entry_dict(kinetic[arch]),
             "23_04": gen_entry_dict(lunar[arch]),
             "23_10": gen_entry_dict(mantic[arch]),
+            "24_04": gen_entry_dict(noble[arch]),
+            "24_10": gen_entry_dict(oracular[arch]),
         }
     return json.dumps(res)
 
