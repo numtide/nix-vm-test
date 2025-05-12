@@ -5,8 +5,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-arm64.img"
     },
     "22_04": {
-      "hash": "06hgm08lcgzblfzimfamrraz55bfqhj2rcvhpr22d9vjhg0i5qb1",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20250429/ubuntu-22.04-server-cloudimg-arm64.img"
+      "hash": "12wz3i0jzggjq85qmkfb5niq3mpdzv87v4kkcd411ns9hn0hxcp2",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20250508/ubuntu-22.04-server-cloudimg-arm64.img"
     },
     "22_10": {
       "hash": "1ivc5i4pi7vvcz8df0srsy61323vw094flq2qkjn6hicdp00rpp6",
@@ -25,8 +25,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/noble/release-20250430/ubuntu-24.04-server-cloudimg-arm64.img"
     },
     "24_10": {
-      "hash": "0vk26fm9zn8vgch1ccfl5xpn9qgsxh03sdj6i496anqkrcnj1ml9",
-      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250430/ubuntu-24.10-server-cloudimg-arm64.img"
+      "hash": "129f9lh4ydvawh2bj7khx43ffj28cnf8r8d5gdnhpwskwl0b6gpd",
+      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250502/ubuntu-24.10-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
@@ -35,8 +35,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20250429/ubuntu-20.04-server-cloudimg-amd64.img"
     },
     "22_04": {
-      "hash": "1hjva6mwz4w6vzv5l01y215p98h6q3g6zhjrjm07m2a98fxwaawm",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20250429/ubuntu-22.04-server-cloudimg-amd64.img"
+      "hash": "0lpvl7qhl7lk08d3i80i1ja4hxv7kcf8r86259xs3gkxl50hpwhc",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20250508/ubuntu-22.04-server-cloudimg-amd64.img"
     },
     "22_10": {
       "hash": "0yjn4j023psby3a17z8sh1030lyihnjysyagqn916vklpcrjgj34",
@@ -55,8 +55,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/noble/release-20250430/ubuntu-24.04-server-cloudimg-amd64.img"
     },
     "24_10": {
-      "hash": "17abqwhsj56nbixm2d6v2vrkq65vhpx83aj9759gk4qyibv41bxs",
-      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250430/ubuntu-24.10-server-cloudimg-amd64.img"
+      "hash": "0s3nwhi05c5z0gpc95rlir6b1vg9gn1agq7y71hivfh5l498l4xd",
+      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250502/ubuntu-24.10-server-cloudimg-amd64.img"
     }
   }
 }
