@@ -25,8 +25,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/noble/release-20250516/ubuntu-24.04-server-cloudimg-arm64.img"
     },
     "24_10": {
-      "hash": "129f9lh4ydvawh2bj7khx43ffj28cnf8r8d5gdnhpwskwl0b6gpd",
-      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250502/ubuntu-24.10-server-cloudimg-arm64.img"
+      "hash": "07bvp18pb2qakli695vhpr9krxn2z3irkihr61979m6a1ck7wdwd",
+      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250522/ubuntu-24.10-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
@@ -55,8 +55,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/noble/release-20250516/ubuntu-24.04-server-cloudimg-amd64.img"
     },
     "24_10": {
-      "hash": "0s3nwhi05c5z0gpc95rlir6b1vg9gn1agq7y71hivfh5l498l4xd",
-      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250502/ubuntu-24.10-server-cloudimg-amd64.img"
+      "hash": "1668y5cscz9wphzv2yq2f462ibi2mbpqv6dvfmhp2c5hlxbc4zy8",
+      "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250522/ubuntu-24.10-server-cloudimg-amd64.img"
     }
   }
 }
