@@ -6,8 +6,8 @@ let
     url = image.name;
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null }: generic.makeVmTest {
-    inherit system testScript sharedDirs;
+  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null, machineConfigModule ? generic.defaultMachineConfigModule }: generic.makeVmTest {
+    inherit system testScript sharedDirs machineConfigModule;
     image = prepareDebianImage {
       inherit diskSize;
       hostPkgs = pkgs;
