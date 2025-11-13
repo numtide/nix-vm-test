@@ -25,7 +25,7 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${generic.backdoor} backdoor.service
+      cp ${generic.backdoor {}} backdoor.service
       cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
       cp ${generic.resizeService} resizeguest.service
 

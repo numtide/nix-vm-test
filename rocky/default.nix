@@ -2,13 +2,13 @@
 let
   imagesJSON = lib.importJSON ./images.json;
   fetchImage = image: pkgs.fetchurl {
-    inherit (image) hash;
-    url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
+    inherit (image) sha256;
+    url = image.url;
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
   makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null, extraPathsToRegister ? [ ]}: generic.makeVmTest {
     inherit system testScript sharedDirs;
-    image = prepareFedoraImage {
+    image = prepareRockyImage {
       inherit diskSize extraPathsToRegister;
       hostPkgs = pkgs;
       originalImage = image;
@@ -18,14 +18,14 @@ let
   resizeService = pkgs.writeText "resizeService" ''
     [Service]
     Type = oneshot
-    ExecStart = growpart /dev/sda 5
-    ExecStart = btrfs filesystem resize max /
+    ExecStart = growpart /dev/sda 1
+    ExecStart = xfs_growfs /
 
     [Install]
     WantedBy = multi-user.target
   '';
 
-  prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
+  prepareRockyImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -36,7 +36,9 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${generic.backdoor { scriptPath = "/usr/bin/backdoorScript"; }} backdoor.service
+      # Also disable mounting store because RHEL (and RHEL clones by nature)
+      # compile their kernels with support for 9P filesystem disabled :(
+      cp ${generic.backdoor { scriptPath = "/usr/bin/backdoorScript"; withMountedStore = false; }} backdoor.service
       cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
       cp ${resizeService} resizeguest.service
       cp ${generic.backdoorScript} backdoorScript
@@ -93,11 +95,34 @@ let
           systemctl enable register-nix-paths.service
           systemctl enable backdoor.service
 
+          # lock repositories to the minor version in vault so that
+          # the dnf operations **always** work for first-party repos
+
+          # safe to do on all repos because you won't find any
+          # non-first-party repos on a fresh image from RESF
+          rockyRepoFiles=( $(find /etc/yum.repos.d -type f 2>/dev/null) )
+          for repoFile in "''${rockyRepoFiles[@]}"; do
+            sed -i 's@.*mirrorlist=@#mirrorlist=@g' "''${repoFile}" # disable mirrorlist
+            sed -i 's@.*baseurl=@baseurl=@g' "''${repoFile}" # switch to fastly CDN
+
+            # `pub/rocky` is for non-EoL, `vault/rocky` is for EoL
+            sed -i 's@$contentdir@vault/rocky@g' "''${repoFile}"
+            sed -i 's@pub/rocky@vault/rocky@g' "''${repoFile}"
+
+            # change `$contentdir` globally
+            sed -i 's@$contentdir@vault/rocky@g' "''${repoFile}"
+
+            # all this to not pollute the current environment with $VERSION_ID
+            /bin/bash -c 'export $(cat /etc/os-release | grep '^VERSION_ID=') && sed -i "s@\$releasever@''${VERSION_ID}@g"' "''${repoFile}"
+          done
+          # change the value of the `contentdir` DNF variable
+          [ -f /etc/dnf/vars/contentdir ] && sed -i 's@pub/rocky@vault/rocky@g' /etc/dnf/vars/contentdir
         '')
+
       ]};
 
       cp ${resultImg} $out
     '';
 in {
-  inherit images prepareFedoraImage;
+  inherit images prepareRockyImage;
 } // lib.mapAttrs (k: v: makeVmTestForImage v) images

@@ -25,10 +25,8 @@ rec {
       ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
 
       # Register the required paths in the nix DB.
-      # The store has been mounted at this point, to we can use writeShellScript now.
-      ExecStart = -${pkgs.writeShellScript "execstartpost-script" ''
-        ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
-      ''}
+      # "Never" use writeShellScript because the nix store might never be mounted
+      ExecStart = -${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}
 
       [Install]
       WantedBy = multi-user.target
@@ -68,16 +66,23 @@ rec {
   '';
 
   # Backdoor service that exposes a root shell through a socket to the test instrumentation framework
-  backdoor =
+  # `withMountedStore`: some distros (primarily rhel and rhel clones)
+  #                     have support for 9P filesystem disabled so we
+  #                     cannot mount nix store _at the moment_.
+  # `scriptPath`: in case `withMountedStore` is set to `false`, the
+  #               script needs to be copied to the VM and the path of
+  #               the backdoor script changes, allow the "builder"
+  #               to specify it
+  backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
     pkgs.writeText "backdoor.service" ''
       [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device mount-store.service
-      After = dev-hvc0.device dev-ttyS0.device mount-store.service
+      Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       # Keep this unit active when we switch to rescue mode for instance
       IgnoreOnIsolate = true
 
       [Service]
-      ExecStart = ${backdoorScript}
+      ExecStart = ${scriptPath}
       KillSignal = SIGHUP
 
       [Install]
