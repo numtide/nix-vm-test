@@ -25,20 +25,6 @@ let
     WantedBy = multi-user.target
   '';
 
-  backdoor = pkgs.writeText "backdoor.service" ''
-      [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device mount-store.service
-      After = dev-hvc0.device dev-ttyS0.device mount-store.service
-      # Keep this unit active when we switch to rescue mode for instance
-      IgnoreOnIsolate = true
-
-      [Service]
-      ExecStart = /usr/bin/backdoorScript
-      KillSignal = SIGHUP
-
-      [Install]
-      WantedBy = multi-user.target
-    '';
   prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
     let
       pkgs = hostPkgs;
@@ -50,7 +36,7 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      cp ${backdoor} backdoor.service
+      cp ${generic.backdoor { scriptPath = "/usr/bin/backdoorScript"; }} backdoor.service
       cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
       cp ${resizeService} resizeguest.service
       cp ${generic.backdoorScript} backdoorScript
