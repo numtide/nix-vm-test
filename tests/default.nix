@@ -5,4 +5,5 @@ let
   ubuntu = addPrefixToTests "ubuntu-" (import ./ubuntu.nix { inherit package pkgs system; });
   debian = addPrefixToTests "debian-" (import ./debian.nix { inherit package pkgs system; });
   fedora = addPrefixToTests "fedora-" (import ./fedora.nix { inherit package pkgs system; });
-in ubuntu // debian // fedora
+  rocky = addPrefixToTests "rocky-" (import ./rocky.nix { inherit package pkgs system; });
+in ubuntu // debian // fedora // rocky
