@@ -6,7 +6,7 @@ let
     url = image.name;
   };
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = image: { testScript, sharedDirs, diskSize ? null, extraPathsToRegister ? [ ] }: generic.makeVmTest {
+  makeVmTestForImage = image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ] }: generic.makeVmTest {
     inherit system testScript sharedDirs;
     image = prepareUbuntuImage {
       inherit diskSize extraPathsToRegister;
