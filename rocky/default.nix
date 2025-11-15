@@ -113,7 +113,7 @@ let
             sed -i 's@$contentdir@vault/rocky@g' "''${repoFile}"
 
             # all this to not pollute the current environment with $VERSION_ID
-            /bin/bash -c 'export $(cat /etc/os-release | grep '^VERSION_ID=') && sed -i "s@\$releasever@''${VERSION_ID}@g"' "''${repoFile}"
+            (export $(cat /etc/os-release | grep '^VERSION_ID=' | sed -e 's/"//g') && sed -i "s@\$releasever@''${VERSION_ID}@g" "''${repoFile}")
           done
           # change the value of the `contentdir` DNF variable
           [ -f /etc/dnf/vars/contentdir ] && sed -i 's@pub/rocky@vault/rocky@g' /etc/dnf/vars/contentdir
