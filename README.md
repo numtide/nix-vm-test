@@ -4,7 +4,12 @@
 
 *Instant VMs to test your project*
 
-<img title="" src="doc/images/DebianFedoraUbuntu.jpg" alt="" width="218">
+<p align="center">
+  <img src="doc/images/logo-fedora.svg" alt="Fedora logo" height="64" style="margin: 0 8px;">
+  <img src="doc/images/logo-debian.svg" alt="Debian logo" height="64" style="margin: 0 8px;">
+  <img src="doc/images/logo-ubuntu.svg" alt="Ubuntu logo" height="64" style="margin: 0 8px;">
+  <img src="doc/images/logo-rocky.png" alt="Rocky Linux logo" height="64" style="margin: 0 8px;">
+</p>
 
 [Get Started](doc/getting-started.md)          [Reference](doc/reference.md)
 
@@ -14,7 +19,14 @@
 
 Testing your project on different Linux distributions is essential, but time-consuming.
 
-**nix-vm-test** allows you to quickly spin up a virtual machine running any of the three major Linux distributions and run your tests using a single CLI command.
+**nix-vm-test** allows you to quickly spin up a virtual machine running any of the following Linux distributions under Qemu:
+
+* Ubuntu
+* Debian
+* Fedora
+* Rocky
+
+And run your tests using a single CLI command.
 
 ## Overview
 
