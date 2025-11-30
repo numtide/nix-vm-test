@@ -2,58 +2,58 @@
   "aarch64-linux": {
     "8_6": {
       "url": "https://download.rockylinux.org/vault/rocky/8.6/images/aarch64/Rocky-8-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.aarch64.qcow2",
+      "name": "Rocky-8.6-GenericCloud.aarch64.qcow2",
       "sha256": "1d2hp7s00hczxz0f0769rjy74fxbyflc8qpq8dzd6xq6q703rnj2"
     },
     "8_7": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.7/images/aarch64/Rocky-8-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.7/images/aarch64/Rocky-8-GenericCloud-Base-8.7-20230215.0.aarch64.qcow2",
+      "name": "Rocky-8.7-GenericCloud.aarch64.qcow2",
       "sha256": "1awgapbai68q8ndy9c1sjmf2hzj0fg78y2xrm55ync8nbv5rhrph"
     },
     "8_8": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.8/images/aarch64/Rocky-8-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.8/images/aarch64/Rocky-8-GenericCloud-Base-8.8-20230518.0.aarch64.qcow2",
+      "name": "Rocky-8.8-GenericCloud.aarch64.qcow2",
       "sha256": "0in78y9ing7j7ys7vzkv99fcya3fq2w3g0kc9h4ngargk0ivivfw"
     },
     "8_9": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.9/images/aarch64/Rocky-8-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.9/images/aarch64/Rocky-8-GenericCloud-Base-8.9-20231119.0.aarch64.qcow2",
+      "name": "Rocky-8.9-GenericCloud.aarch64.qcow2",
       "sha256": "0i6zjrqp17vyy3k031bzsf743w9r5ws2qcck45q01lmq4zy1l740"
     },
 
     "9_0": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.0/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.0/images/aarch64/Rocky-9-GenericCloud-9.0-20220830.0.aarch64.qcow2",
+      "name": "Rocky-9.0-GenericCloud.aarch64.qcow2",
       "sha256": "07p4k3s3ikadfa54d17kyc7hmbbfpsnvpyhll5fw33zpay6jw9ja"
     },
     "9_1": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.1/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.1/images/aarch64/Rocky-9-GenericCloud-Base-9.1-20230215.0.aarch64.qcow2",
+      "name": "Rocky-9.1-GenericCloud.aarch64.qcow2",
       "sha256": "0a9ql48nn4hj7w56vbzifxqddqffhqskb6x6qminsdq86cpmk4b9"
     },
     "9_2": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.2/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.2/images/aarch64/Rocky-9-GenericCloud-Base-9.2-20230513.0.aarch64.qcow2",
+      "name": "Rocky-9.2-GenericCloud.aarch64.qcow2",
       "sha256": "1n05gk8sh61bdadyrg6lswx1vqr1r7cb0hqf8ynhg41mpv054xzb"
     },
     "9_3": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.3/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.3/images/aarch64/Rocky-9-GenericCloud-Base-9.3-20231113.0.aarch64.qcow2",
+      "name": "Rocky-9.3-GenericCloud.aarch64.qcow2",
       "sha256": "1hac6nkrbw60pbd00pag8hbrwrcickwrqcrm0ciz7nw60zhaaj0r"
     },
     "9_4": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.4/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.4/images/aarch64/Rocky-9-GenericCloud-Base-9.4-20240609.0.aarch64.qcow2",
+      "name": "Rocky-9.4-GenericCloud.aarch64.qcow2",
       "sha256": "123gxswmh1a48k651fj18520pnxhrj42hffs37palbr1cr8dk7dd"
     },
     "9_5": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.5/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.5/images/aarch64/Rocky-9-GenericCloud-Base-9.5-20241118.0.aarch64.qcow2",
+      "name": "Rocky-9.5-GenericCloud.aarch64.qcow2",
       "sha256": "1waj6byn8hc27y9icckhdjbbd3db6mhjd39yppbw7bbza30bqhsl"
     },
     "9_6": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.6/images/aarch64/Rocky-9-GenericCloud.latest.aarch64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.aarch64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.6/images/aarch64/Rocky-9-GenericCloud-Base-9.6-20250531.0.aarch64.qcow2",
+      "name": "Rocky-9.6-GenericCloud.aarch64.qcow2",
       "sha256": "0jhfnggfp5ywbqmxz1cb9lhvxlm8zffw8h5l5a7c44f0gk0v4xip"
     }
   },
@@ -61,58 +61,58 @@
   "x86_64-linux": {
     "8_6": {
       "url": "https://download.rockylinux.org/vault/rocky/8.6/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.x86_64.qcow2",
+      "name": "Rocky-8.6-GenericCloud.x86_64.qcow2",
       "sha256": "1l19bj4s99x0n02s3ym5p70zcdv733zpfqrqhpfj4vmrxqwnly3v"
     },
     "8_7": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.7/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.7/images/x86_64/Rocky-8-GenericCloud-Base-8.7-20230215.0.x86_64.qcow2",
+      "name": "Rocky-8.7-GenericCloud.x86_64.qcow2",
       "sha256": "0npbh24fdx0fxnmvvng34qc0m7p8nsgddijz96iqwjqjfrmy0hpj"
     },
     "8_8": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.8/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.8/images/x86_64/Rocky-8-GenericCloud-Base-8.8-20230518.0.x86_64.qcow2",
+      "name": "Rocky-8.8-GenericCloud.x86_64.qcow2",
       "sha256": "0xyzbqfqajzj7i1213x3h7v0s9sjhyzcah9pag7wyx69hj7zcsq8"
     },
     "8_9": {
-      "url": "https://download.rockylinux.org/vault/rocky/8.9/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-8-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/8.9/images/x86_64/Rocky-8-GenericCloud-Base-8.9-20231119.0.x86_64.qcow2",
+      "name": "Rocky-8.9-GenericCloud.x86_64.qcow2",
       "sha256": "1r9smjpf2z3bppqfkaggbxyjw1n51ywi9h86adwn9l4xcjkiazyi"
     },
 
     "9_0": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.0/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.0/images/x86_64/Rocky-9-GenericCloud-9.0-20220830.0.x86_64.qcow2",
+      "name": "Rocky-9.0-GenericCloud.x86_64.qcow2",
       "sha256": "02z2ji3d556g9n1dbb1l6802msfv75viba5sarzxylrnmph709gh"
     },
     "9_1": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.1/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.1/images/x86_64/Rocky-9-GenericCloud-Base-9.1-20230215.0.x86_64.qcow2",
+      "name": "Rocky-9.1-GenericCloud.x86_64.qcow2",
       "sha256": "0rdcbvk87x5prx0gcs718z3mlrw3hd5s7h1zw59814byrlw071ak"
     },
     "9_2": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.2/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.2/images/x86_64/Rocky-9-GenericCloud-Base-9.2-20230513.0.x86_64.qcow2",
+      "name": "Rocky-9.2-GenericCloud.x86_64.qcow2",
       "sha256": "0c0lvvv0ixfir3ah5iagcfzv0lrix2dmm802h5a0mcp1mfc0ylah"
     },
     "9_3": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.3/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.3/images/x86_64/Rocky-9-GenericCloud-Base-9.3-20231113.0.x86_64.qcow2",
+      "name": "Rocky-9.3-GenericCloud.x86_64.qcow2",
       "sha256": "0lg6nbwxx19a9bpfg5sddgw4swn3qlzclhd8n10h76zj6y62f4vp"
     },
     "9_4": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.4/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.4/images/x86_64/Rocky-9-GenericCloud-Base-9.4-20240609.0.x86_64.qcow2",
+      "name": "Rocky-9.4-GenericCloud.x86_64.qcow2",
       "sha256": "1msxpb4i3nrpp64p9zqyqxdfa8yscidyyrk1pbqg7bxgppxy8jks"
     },
     "9_5": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.5/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.5/images/x86_64/Rocky-9-GenericCloud-Base-9.5-20241118.0.x86_64.qcow2",
+      "name": "Rocky-9.5-GenericCloud.x86_64.qcow2",
       "sha256": "0mxzxqdf5jf1l22pj2mlj9x25wng3wbyjh352wi0lc07r3yr7506"
     },
     "9_6": {
-      "url": "https://download.rockylinux.org/vault/rocky/9.6/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2",
-      "name": "Rocky-9-GenericCloud.latest.x86_64.qcow2",
+      "url": "https://download.rockylinux.org/vault/rocky/9.6/images/x86_64/Rocky-9-GenericCloud-Base-9.6-20250531.0.x86_64.qcow2",
+      "name": "Rocky-9.6-GenericCloud.x86_64.qcow2",
       "sha256": "0g8ad60a62hk0bxw6icavci3f0sjkc77h127vszcrb9wp1dq2wic"
     }
   }
