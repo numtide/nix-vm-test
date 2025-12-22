@@ -206,7 +206,7 @@ rec {
           ]};
         '';
 
-      test-driver = hostPkgs.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
+      test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
 
       runTest = { nodes, vlans, interactive }: ''
         # Exporting the current directory. The start script need it to
