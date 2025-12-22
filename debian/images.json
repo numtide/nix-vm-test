@@ -5,8 +5,8 @@
       "name": "https://cloud.debian.org/images/cloud/bookworm/20251112-2294/debian-12-generic-arm64-20251112-2294.qcow2"
     },
     "13": {
-      "hash": "0bl5ymsf7k8qnbdqzddidqzsv6b1jhp7smlnjlrh2hxqswnanwc9",
-      "name": "https://cloud.debian.org/images/cloud/trixie/daily/20251214-2326/debian-13-generic-arm64-daily-20251214-2326.qcow2"
+      "hash": "0liiz26fay00s04a8aw77kbg8dd7z2qbv0dsq74mkwgi9gx9l4g7",
+      "name": "https://cloud.debian.org/images/cloud/trixie/daily/20251221-2333/debian-13-generic-arm64-daily-20251221-2333.qcow2"
     }
   },
   "x86_64-linux": {
@@ -15,8 +15,8 @@
       "name": "https://cloud.debian.org/images/cloud/bookworm/20251112-2294/debian-12-generic-amd64-20251112-2294.qcow2"
     },
     "13": {
-      "hash": "0s45ha82n6fb958ilgx5gw2gsm8cl8q95r62mnrd372hv01hmz72",
-      "name": "https://cloud.debian.org/images/cloud/trixie/daily/20251214-2326/debian-13-generic-amd64-daily-20251214-2326.qcow2"
+      "hash": "13qf2rzcyvqf1858bgvwqvfp0s5gqb96x1bz5fv3irqcxi47lzyz",
+      "name": "https://cloud.debian.org/images/cloud/trixie/daily/20251221-2333/debian-13-generic-amd64-daily-20251221-2333.qcow2"
     }
   }
 }
