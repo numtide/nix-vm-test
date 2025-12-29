@@ -57,6 +57,35 @@ in {
     '';
   }).sandboxed;
 
+  pathsToRegisterTest = let
+    testPackage = pkgs.runCommandNoCC "test-package" {} ''
+      mkdir -p $out/bin
+      echo '#!/bin/sh' > $out/bin/test-tool
+      echo 'echo "Hello from test-package"' >> $out/bin/test-tool
+      chmod +x $out/bin/test-tool
+    '';
+    nixStoreBin = "${pkgs.lib.getBin pkgs.nix}/bin/nix-store";
+  in (lib.ubuntu."23_04" {
+    sharedDirs = {};
+    testScript = ''
+      vm.wait_for_unit("multi-user.target")
+      # Verify mount-store.service completed successfully (oneshot services become inactive after completion)
+      vm.succeed('systemctl show -p Result mount-store.service | grep -q "Result=success"')
+      # Verify the nix store is mounted
+      vm.succeed('test -d /nix/store')
+      # Verify the test package path exists in the store
+      vm.succeed('test -d ${testPackage}')
+      # Verify the package contents are accessible
+      vm.succeed('test -f ${testPackage}/bin/test-tool')
+      vm.succeed('${testPackage}/bin/test-tool | grep "Hello from test-package"')
+      # Verify the nix database was populated
+      vm.succeed('test -f /nix/var/nix/db/db.sqlite')
+      # Verify the test package is registered in the nix database
+      vm.succeed('${nixStoreBin} --dump-db | grep -q "${testPackage}"')
+    '';
+    extraPathsToRegister = [ testPackage ];
+  }).sandboxed;
+
 }
 // package.ubuntu.images
 // runTestOnEveryImage multiUserTest
