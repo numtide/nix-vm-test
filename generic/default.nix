@@ -106,6 +106,7 @@ rec {
     , testScript
     , sharedDirs
     , machineConfigModule ? defaultMachineConfigModule
+    , name ? "vm-test"
     }:
     let
       hostPkgs = pkgs;
@@ -230,13 +231,12 @@ rec {
         in
         {
           sandboxed = hostPkgs.stdenv.mkDerivation {
-            name = "vm-test";
             requiredSystemFeatures = [ "kvm" "nixos-test" ];
             buildCommand = ''
               ${defaultTest {}}
               touch $out
             '';
-            inherit passthru;
+            inherit name passthru;
           };
 
           driver = (hostPkgs.writeShellScriptBin "test-driver"
