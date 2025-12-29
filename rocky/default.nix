@@ -6,7 +6,8 @@ let
     url = image.url;
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
-  makeVmTestForImage = image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ]}: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ]}: generic.makeVmTest {
+    name = "vm-test-rocky_${imageID}";
     inherit system testScript sharedDirs;
     image = prepareRockyImage {
       inherit diskSize extraPathsToRegister;
@@ -125,4 +126,4 @@ let
     '';
 in {
   inherit images prepareRockyImage;
-} // lib.mapAttrs (k: v: makeVmTestForImage v) images
+} // lib.mapAttrs makeVmTestForImage images
