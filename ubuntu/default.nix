@@ -32,7 +32,7 @@ let
 
       ${lib.optionalString (diskSize != null) ''
         export PATH="${pkgs.qemu}/bin:$PATH"
-        qemu-img resize ${resultImg} +2G
+        qemu-img resize ${resultImg} ${diskSize}
       ''}
 
       #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1
