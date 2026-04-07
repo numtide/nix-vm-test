@@ -142,6 +142,7 @@ ${lib.optionalString (pathsToRegister != []) ''
         ];
       }).config;
 
+      nodeNames = lib.attrNames config.nodes;
       nodes = interactive: map (runVmScript interactive) (lib.attrValues config.nodes);
 
       runVmScript = interactive: node:
@@ -213,9 +214,12 @@ ${lib.optionalString (pathsToRegister != []) ''
         # Exporting the current directory. The start script need it to
         # resolve the relative mount points.
         export rundir="$(pwd)"
+        export containerNames=""
+        export containerStartScripts=""
         ${lib.getBin test-driver}/bin/nixos-test-driver \
         ${lib.optionalString interactive "--interactive"} \
-        --start-scripts ${lib.concatStringsSep " " (nodes interactive)} \
+        --vm-names ${lib.concatStringsSep " " nodeNames} \
+          --vm-start-scripts ${lib.concatStringsSep " " (nodes interactive)} \
           --vlans ${lib.concatStringsSep " " vlans} \
           -- ${hostPkgs.writeText "test-script" testScriptWithMounts}
       '';
