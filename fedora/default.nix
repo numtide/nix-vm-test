@@ -6,11 +6,11 @@ let
     url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ]}: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? false }: generic.makeVmTest {
     name = "vm-test-fedora_${imageID}";
     inherit system testScript sharedDirs;
     image = prepareFedoraImage {
-      inherit diskSize extraPathsToRegister;
+      inherit diskSize extraPathsToRegister selinuxEnforcing;
       hostPkgs = pkgs;
       originalImage = image;
     };
@@ -26,7 +26,7 @@ let
     WantedBy = multi-user.target
   '';
 
-  prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
+  prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister, selinuxEnforcing ? false }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -94,6 +94,9 @@ let
           systemctl enable register-nix-paths.service
           systemctl enable backdoor.service
 
+          ${lib.optionalString (!selinuxEnforcing) ''
+            sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+          ''}
         '')
       ]};
 
