@@ -15,12 +15,10 @@
     "42": {
       "name": "42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
       "hash": "sha256-5AGk2y5eBNGWe2cpd0+qltpim887qQtn2NnM6ZBr7A8="
-    }
-  },
-  "aarch64-linux": {
-    "42": {
-      "name": "42/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2",
-      "hash": "sha256-4QZYQZqNUCMQN9x4HDFVqpQYCox6dOXKwqawnqqTQrc="
+    },
+    "43": {
+      "name": "43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
+      "hash": "sha256-hGV0yKl80tjcHyMQYtcxB8yFy7vaVjNeJkpG46bIqy8="
     }
   }
 }
