@@ -17,17 +17,13 @@ rec {
       [Service]
       Type = oneshot
       User = root
-      ExecStart = mkdir -p /nix/.ro-store
-      ExecStart = mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store
-      ExecStart = mkdir -p -m 0755 /nix/.rw-store/ /nix/store
-      ExecStart = mount -t tmpfs tmpfs /nix/.rw-store
-      ExecStart = mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work
-      ExecStart = mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work
-${lib.optionalString (pathsToRegister != []) ''
-      # Register the required paths in the nix DB.
-      # "Never" use writeShellScript because the nix store might never be mounted
-      ExecStart = ${pkgs.bash}/bin/bash -c '${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}'
-''}
+      ExecStart = /bin/sh -euc ' \
+        mkdir -p /nix/.ro-store; \
+        mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store; \
+        mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
+        mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
+        mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
+        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
       [Install]
       WantedBy = multi-user.target
     '';
