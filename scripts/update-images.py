@@ -123,6 +123,42 @@ def ubuntu_parse():
         }
     return json.dumps(res)
 
+def get_latest_archlinux_release(index_url):
+    print(f"[+] Parsing archlinux index {index_url}")
+    page = requests.get(index_url)
+    soup = BeautifulSoup(page.content, "html.parser")
+    links = soup.find_all("a")
+    versioned = [
+        link["href"].rstrip("/")
+        for link in links
+        if re.compile(r"^v[0-9]{8}\.[0-9]+/?$").match(link["href"])
+    ]
+    parsed = [
+        (datetime.strptime(v[1:9], "%Y%m%d"), v) for v in versioned
+    ]
+    return max(parsed)[1]
+
+def archlinux_parse():
+    index_url = "https://geo.mirror.pkgbuild.com/images/"
+    latest = get_latest_archlinux_release(index_url)
+    date_part = latest[1:9]
+    release_url = f"{index_url}{latest}/"
+
+    def fetch_sha256(url):
+        print(f"[+] Fetching SHA256 for {url}")
+        return requests.get(url).text.split()[0]
+
+    url = f"{release_url}Arch-Linux-x86_64-basic-{latest[1:]}.qcow2"
+    return json.dumps({
+        "x86_64-linux": {
+            date_part: {
+                "url": url,
+                "name": f"Arch-Linux-x86_64-basic-{latest[1:]}.qcow2",
+                "hash": nix_hash(url),
+            }
+        }
+    })
+
 if __name__ == '__main__':
     ubuntu_json = ubuntu_parse()
     with open("ubuntu.json", "w") as f:
@@ -130,3 +166,6 @@ if __name__ == '__main__':
     debian_json = debian_parse()
     with open("debian.json", "w") as f:
         f.write(debian_json)
+    archlinux_json = archlinux_parse()
+    with open("archlinux.json", "w") as f:
+        f.write(archlinux_json)
