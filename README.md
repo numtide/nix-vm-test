@@ -25,12 +25,13 @@ Testing your project on different Linux distributions is essential, but time-con
 * Debian
 * Fedora
 * Rocky
+* Arch Linux
 
 And run your tests using a single CLI command.
 
 ## Overview
 
-This project builds on the [NixOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, Fedora, and Rocky virtual machines.
+This project builds on the [NixOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, Fedora, Rocky, and Arch Linux virtual machines.
 
 It runs on any Linux machine with Nix installed.
 

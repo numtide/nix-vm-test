@@ -7,12 +7,13 @@ let
   debian = prev.callPackage ./debian { inherit generic system; };
   fedora = prev.callPackage ./fedora { inherit generic system; };
   rocky = prev.callPackage ./rocky { inherit generic system; };
+  archlinux = prev.callPackage ./archlinux { inherit generic system; };
 in
 
 {
   testers = prev.testers or { } // {
     nonNixOSDistros = prev.testers.nonNixOSDistros or {} // {
-      inherit debian ubuntu fedora rocky;
+      inherit debian ubuntu fedora rocky archlinux;
     };
   };
 }
