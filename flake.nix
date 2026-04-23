@@ -1,5 +1,5 @@
 {
-  description = "Nix-VM-Test, re-use the NixOS VM integration test infrastructure on Ubuntu, Debian and Fedora";
+  description = "Nix-VM-Test, re-use the NixOS VM integration test infrastructure on Ubuntu, Debian, Fedora, Rocky and Arch Linux";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
