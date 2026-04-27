@@ -138,8 +138,9 @@ rec {
         ];
       }).config;
 
-      nodeNames = lib.attrNames config.nodes;
-      nodes = interactive: map (runVmScript interactive) (lib.attrValues config.nodes);
+      nodes = interactive: lib.mapAttrs
+        (name: node: { inherit name; start_script = runVmScript interactive node; })
+        config.nodes;
 
       runVmScript = interactive: node:
       let
@@ -206,23 +207,30 @@ rec {
 
       test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
 
-      runTest = { nodes, vlans, interactive }: ''
+      # create configuration file based on test driver configuration
+      # see https://github.com/NixOS/nixpkgs/blob/6ab8a6fd46fa56298ad16ec9b36cf6ab04413459/nixos/lib/test-driver/src/test_driver/driver.py#L38
+      driverConfigFile = { vlans, interactive }:
+        hostPkgs.writers.writeJSON "driver-configuration.json" {
+          vms = nodes interactive;
+          containers = { };
+          inherit vlans;
+          global_timeout = 60 * 60;
+          enable_ssh_backdoor = false;
+          test_script = hostPkgs.writeText "test-script" testScriptWithMounts;
+        };
+
+      runTest = { vlans, interactive }: ''
         # Exporting the current directory. The start script need it to
         # resolve the relative mount points.
         export rundir="$(pwd)"
-        export containerNames=""
-        export containerStartScripts=""
         ${lib.getBin test-driver}/bin/nixos-test-driver \
-        ${lib.optionalString interactive "--interactive"} \
-        --vm-names ${lib.concatStringsSep " " nodeNames} \
-          --vm-start-scripts ${lib.concatStringsSep " " (nodes interactive)} \
-          --vlans ${lib.concatStringsSep " " vlans} \
-          -- ${hostPkgs.writeText "test-script" testScriptWithMounts}
+          ${lib.optionalString interactive "--interactive"} \
+          -c ${driverConfigFile { inherit vlans interactive; }}
       '';
 
       defaultTest = { interactive ? false }: runTest {
-        inherit interactive nodes;
-        vlans = [ "1" ];
+        inherit interactive;
+        vlans = [ 1 ];
       };
 
       targets =
