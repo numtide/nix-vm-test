@@ -27,6 +27,10 @@
     "24_10": {
       "hash": "0zsjvg6zkl95i81v8iw16fqgx6w7zq0fqaph68nri3ricr6i679x",
       "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-arm64.img"
+    },
+    "26_04": {
+      "hash": "1fl82ybpc97za594wadldpf8fgvrmsr3n5vmjdr177pk87fky49y",
+      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260731/ubuntu-26.04-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
@@ -57,6 +61,10 @@
     "24_10": {
       "hash": "00yars1n82rcxvba8n8krlg32phf36avqprldrj5ypl910r1vwv9",
       "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img"
+    },
+    "26_04": {
+      "hash": "01dy46g1i8dby2idj6j73jxxzin2h96q7an9l25s0ih17hvcbiwx",
+      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260731/ubuntu-26.04-server-cloudimg-amd64.img"
     }
   }
 }
