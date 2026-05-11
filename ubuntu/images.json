@@ -57,6 +57,10 @@
     "24_10": {
       "hash": "00yars1n82rcxvba8n8krlg32phf36avqprldrj5ypl910r1vwv9",
       "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img"
+    },
+    "26_04": {
+      "hash": "sha256-jtIoyfCKUBIvpyMHYj2fiNkgm6JufoSe3VhPpnXjSGM=",
+      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-amd64.img"
     }
   }
 }

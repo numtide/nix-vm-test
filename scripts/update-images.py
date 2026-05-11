@@ -100,6 +100,7 @@ def ubuntu_parse():
     kinetic_url = "https://cloud-images.ubuntu.com/releases/22.10/"
     jammy_url = "https://cloud-images.ubuntu.com/releases/22.04/"
     focal_url = "https://cloud-images.ubuntu.com/releases/focal/"
+    resolute_url = "https://cloud-images.ubuntu.com/releases/resolute/"
     oracular = get_latest_ubuntu_image(oracular_url)
     noble = get_latest_ubuntu_image(noble_url)
     mantic = get_latest_ubuntu_image(mantic_url)
@@ -107,6 +108,7 @@ def ubuntu_parse():
     kinetic = get_latest_ubuntu_image(kinetic_url)
     jammy = get_latest_ubuntu_image(jammy_url)
     focal = get_latest_ubuntu_image(focal_url)
+    resolute = get_latest_ubuntu_image(resolute_url)
 
     res = {}
     def gen_entry_dict(entry):
@@ -120,6 +122,7 @@ def ubuntu_parse():
             "23_10": gen_entry_dict(mantic[arch]),
             "24_04": gen_entry_dict(noble[arch]),
             "24_10": gen_entry_dict(oracular[arch]),
+            "26_04": gen_entry_dict(resolute[arch]),
         }
     return json.dumps(res)
 
