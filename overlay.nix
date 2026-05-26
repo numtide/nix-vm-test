@@ -1,7 +1,7 @@
 final: prev:
 
 let
-  inherit (prev) system;
+  inherit (prev.stdenv.hostPlatform) system;
   generic = import ./generic { inherit (prev) lib; pkgs = final; nixpkgs = prev.path; };
   ubuntu = prev.callPackage ./ubuntu { inherit generic system; };
   debian = prev.callPackage ./debian { inherit generic system; };
