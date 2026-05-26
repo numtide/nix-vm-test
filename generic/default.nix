@@ -102,6 +102,8 @@ rec {
     , testScript
     , sharedDirs
     , machineConfigModule ? defaultMachineConfigModule
+    , memorySize ? null
+    , cpus ? null
     , name ? "vm-test"
     }:
     let
@@ -131,6 +133,11 @@ rec {
         modules = [
           (./module.nix)
           ({ config, ... }: { nodes.vm.virtualisation.sharedDirectories = sharedDirs; })
+          ({ ... }: {
+            nodes.vm.virtualisation =
+              lib.optionalAttrs (memorySize != null) { inherit memorySize; }
+              // lib.optionalAttrs (cpus != null) { inherit cpus; };
+          })
           machineConfigModule
           {
             _file = "${printAttrPos (builtins.unsafeGetAttrPos "a" { a = null; })}: inline module";
