@@ -1,22 +1,25 @@
-{ generic, pkgs, lib, system }:
+{ generic, guestPkgs, lib, guestSystem }:
 let
   imagesJSON = lib.importJSON ./images.json;
-  fetchImage = image: pkgs.fetchurl {
+  fetchImage = image: guestPkgs.fetchurl {
     inherit (image) hash;
     url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
   };
-  images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
+  # Fedora only ships x86_64 images here, so on an aarch64 guest (e.g. darwin)
+  # `imagesJSON.${guestSystem}` is absent and this cleanly resolves to no tests.
+  images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${guestSystem} or {});
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? false, memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-fedora_${imageID}";
-    inherit system testScript sharedDirs memorySize cpus;
+    inherit testScript sharedDirs memorySize cpus;
     image = prepareFedoraImage {
       inherit diskSize extraPathsToRegister selinuxEnforcing;
-      hostPkgs = pkgs;
+      # Image preparation is Linux work, so it always runs with `guestPkgs`.
+      buildPkgs = guestPkgs;
       originalImage = image;
     };
   };
 
-  resizeService = pkgs.writeText "resizeService" ''
+  resizeService = guestPkgs.writeText "resizeService" ''
     [Service]
     Type = oneshot
     ExecStart = growpart /dev/sda 5
@@ -26,9 +29,9 @@ let
     WantedBy = multi-user.target
   '';
 
-  prepareFedoraImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister, selinuxEnforcing ? false }:
+  prepareFedoraImage = { buildPkgs, originalImage, diskSize, extraPathsToRegister, selinuxEnforcing ? false }:
     let
-      pkgs = hostPkgs;
+      pkgs = buildPkgs;
       resultImg = "./image.qcow2";
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
@@ -72,7 +75,7 @@ let
           groupadd nixbld
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl mask serial-getty@ttyS0.service
+          systemctl mask serial-getty@${generic.serialConsole}.service
           systemctl mask serial-getty@hvc0.service
 
           # We have no network in the test VMs, avoid an error on bootup

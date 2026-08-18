@@ -1,5 +1,17 @@
-{ lib, pkgs, nixpkgs }:
+{ lib, hostPkgs, guestPkgs, nixpkgs, ... }:
 rec {
+  # `hostPkgs`  : packages that run on the machine driving the test (QEMU, the
+  #               Python test-driver, the run-vm wrapper script). On a Linux host
+  #               this is the same as `guestPkgs`; on darwin it is a darwin set.
+  # `guestPkgs` : packages that run *inside* the Linux guest or are baked into the
+  #               image (backdoor shell, `nix-store`, image preparation). These must
+  #               always be Linux packages, so on darwin they are built for the
+  #               matching `*-linux` system (via a Linux/remote builder).
+  qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
+  guestIsAarch64 = guestPkgs.stdenv.hostPlatform.isAarch64;
+  hostIsDarwin = hostPkgs.stdenv.hostPlatform.isDarwin;
+  serialConsole = if guestIsAarch64 then "ttyAMA0" else "ttyS0";
+
   defaultMachineConfigModule = { ... }: {
     nodes = {
     };
@@ -7,13 +19,13 @@ rec {
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
   # Careful since we do not have the nix store yet when this service runs,
-  # so we cannot use pkgs.writeText or pkgs.writeShellScript for instance,
+  # so we cannot use guestPkgs.writeText or guestPkgs.writeShellScript for instance,
   # since their results would refer to the store
   mountStore = { pathsToRegister ? [ ] }:
     let
-      pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
+      pathRegistrationInfo = "${guestPkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
-    pkgs.writeText "mount-store.service" ''
+    guestPkgs.writeText "mount-store.service" ''
       [Service]
       Type = oneshot
       User = root
@@ -23,12 +35,12 @@ rec {
         mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
         mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
         mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
-        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
+        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin guestPkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
       [Install]
       WantedBy = multi-user.target
     '';
 
-  backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
+  backdoorScript = guestPkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
 
     ProtectSystem=false
@@ -48,7 +60,7 @@ rec {
 
     cd /tmp
     exec < /dev/hvc0 > /dev/hvc0
-    while ! exec 2> /dev/ttyS0; do sleep 0.1; done
+    while ! exec 2> /dev/${serialConsole}; do sleep 0.1; done
     echo "connecting to host..." >&2
     stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
     # This line is essential since it signals to the test driver that the
@@ -70,10 +82,10 @@ rec {
   #               the backdoor script changes, allow the "builder"
   #               to specify it
   backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
-    pkgs.writeText "backdoor.service" ''
+    guestPkgs.writeText "backdoor.service" ''
       [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
-      After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      Requires = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      After = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       # Keep this unit active when we switch to rescue mode for instance
       IgnoreOnIsolate = true
 
@@ -85,7 +97,9 @@ rec {
       WantedBy = multi-user.target
     '';
 
-    resizeService = pkgs.writeText "resizeService" ''
+    # Baked (x86_64) path only: the aarch64/cloud-init path relies on cloud-init's
+    # own default growpart/resizefs modules instead (see ubuntu/default.nix).
+    resizeService = guestPkgs.writeText "resizeService" ''
       [Service]
       Type = oneshot
       ExecStart = apt-get install -yq cloud-guest-utils
@@ -96,20 +110,56 @@ rec {
       WantedBy = multi-user.target
     '';
 
+  # Build a cloud-init NoCloud seed ISO. Used on darwin/aarch64 where `guestfs`
+  # (and therefore `virt-customize`) is unavailable: instead of baking the guest
+  # customization into the image ahead of time, we attach this seed at VM launch
+  # and let cloud-init apply it on boot.
+  #
+  # `files`    : attrset of `<name-on-seed> = <store path>`; copied verbatim onto
+  #              the seed so `runcmd` can install them into the guest.
+  # `userData` : the cloud-config (`#cloud-config …`) YAML string.
+  #
+  # The seed is a plain ISO9660 volume labelled CIDATA, which cloud-init's NoCloud
+  # datasource discovers automatically on any attached block device.
+  mkCloudInitSeed = { files ? { }, userData }:
+    guestPkgs.runCommand "cloud-init-seed.iso"
+      { nativeBuildInputs = [ guestPkgs.cdrkit ]; }
+      ''
+        mkdir -p seed
+        printf 'instance-id: iid-nixvmtest\nlocal-hostname: vm\n' > seed/meta-data
+        cp ${guestPkgs.writeText "user-data" userData} seed/user-data
+        ${lib.concatStrings (lib.mapAttrsToList (name: src: "cp ${src} seed/${name}\n") files)}
+        ( cd seed && genisoimage -output "$out" -volid CIDATA -joliet -rock * )
+      '';
+
+  # Assemble a `#cloud-config` user-data document. `runcmd` is a list of shell
+  # command strings run (in order, as root) on boot. Guest customization files are
+  # shipped on the seed (see `mkCloudInitSeed`'s `files`) and installed by `runcmd`,
+  # which keeps this pure (no import-from-derivation of file contents).
+  # Each command is emitted via `builtins.toJSON` (a valid YAML double-quoted
+  # scalar) rather than as a raw plain scalar, so a command containing a
+  # leading '#' or ': ' can't be misparsed as a YAML comment/mapping.
+  mkUserData = { runcmd ? [ ] }:
+    lib.concatStringsSep "\n" (
+      [ "#cloud-config" ]
+      ++ lib.optionals (runcmd != [ ]) ([ "runcmd:" ] ++ map (c: "  - ${builtins.toJSON c}") runcmd)
+    );
+
   makeVmTest =
-    { system
-    , image
+    { image
     , testScript
     , sharedDirs
     , machineConfigModule ? defaultMachineConfigModule
     , memorySize ? null
     , cpus ? null
     , name ? "vm-test"
+    # Optional cloud-init NoCloud seed ISO (see `mkCloudInitSeed`). When set, it is
+    # attached as an extra drive so cloud-init customizes the guest on boot. Used
+    # on darwin/aarch64 in place of the baked `virt-customize` image.
+    , cloudInitSeed ? null
     }:
     let
-      hostPkgs = pkgs;
-
-      mountSharesScript = pkgs.writeScriptBin "mount-shares" {} ''
+      mountSharesScript = hostPkgs.writeScriptBin "mount-shares" {} ''
       '';
 
       # TODO: hacky hacky… We need to mount the 9p shares at some
@@ -152,6 +202,50 @@ rec {
       runVmScript = interactive: node:
       let
         qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
+
+        # On darwin we accelerate with Apple's Hypervisor.framework (HVF); on Linux
+        # with KVM. We only ever pair a host with a same-architecture Linux guest
+        # (e.g. aarch64-darwin → aarch64-linux), so hardware acceleration always applies.
+        accel = if hostIsDarwin then "hvf" else "kvm";
+
+        qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
+
+        machineFlags =
+          if guestIsAarch64 then
+            [ "-machine virt,accel=${accel}" ]
+          else
+            [ "-machine accel=${accel}" ];
+
+        firmwareFlags = lib.optionals guestIsAarch64 [
+          "-drive if=pflash,format=raw,unit=0,readonly=on,file=${qemupkg}/share/qemu/edk2-aarch64-code.fd"
+          "-drive if=pflash,format=raw,unit=1,file=\"$TMPDIR/efivars.fd\""
+        ];
+
+        diskFlags =
+          if guestIsAarch64 then
+            [ "-drive if=none,file=${image},format=qcow2,id=disk0"
+              "-device virtio-blk-pci,drive=disk0"
+            ]
+          else
+            [ "-drive file=${image},format=qcow2" ];
+
+        # Attach the cloud-init NoCloud seed (read-only) when provided.
+        seedFlags = lib.optionals (cloudInitSeed != null) [
+          "-drive if=none,id=cidata,format=raw,readonly=on,file=${cloudInitSeed}"
+          "-device virtio-blk-pci,drive=cidata"
+        ];
+
+        # On aarch64 UEFI, disable the NIC's option ROM via romfile=. Without this,
+        # every boot prints "Image type X64 can't be loaded on AARCH64 UEFI system."
+        # while EDK2 tries (and fails) to load the ROM's x86 EFI section — harmless
+        # (the disk still boots normally) but noisy on every single boot. We never
+        # PXE-boot, so dropping the ROM outright is safe and removes the warning.
+        netDevFlag =
+          if guestIsAarch64 then
+            "-device virtio-net-pci,netdev=net0,romfile="
+          else
+            "-device virtio-net-pci,netdev=net0";
+
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
@@ -185,20 +279,23 @@ rec {
           mkdir -p "$TMPDIR/xchg"
 
           cd "$TMPDIR"
+          ${lib.optionalString guestIsAarch64 ''
+            # Writable UEFI variable store for the aarch64 firmware above. A blank
+            # 64 MiB NVRAM matches the code image size; -snapshot keeps it ephemeral.
+            truncate -s 64M "$TMPDIR/efivars.fd"
+          ''}
 
           # Start QEMU.
-          # We might need to be smarter about the QEMU binary to run when we want to
-          # support architectures other than x86_64.
-          # See qemu-common.nix in nixpkgs.
-          ${lib.concatStringsSep "\\\n  " [
-            "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
+          ${lib.concatStringsSep "\\\n  " ([
+            "exec ${qemuBinary}"
+          ] ++ machineFlags ++ [
             "-device virtio-rng-pci"
             "-cpu max"
             "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
-            "-drive file=${image},format=qcow2"
-            "-device virtio-net-pci,netdev=net0"
+          ] ++ firmwareFlags ++ diskFlags ++ seedFlags ++ [
+            netDevFlag
             "-netdev user,id=net0"
             "-virtfs local,security_model=passthrough,id=fsdev1,path=/nix/store,readonly=on,mount_tag=nix-store"
             (lib.concatStringsSep "\\\n  "
@@ -209,10 +306,27 @@ rec {
             (lib.optionalString (!interactive) "-nographic")
             "$QEMU_OPTS"
             "$@"
-          ]};
+          ])};
         '';
 
-      test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
+      test-driver =
+        (hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver"
+          # `vhost-device-vsock` is a Linux-only dependency of the test driver (used
+          # for the vsock SSH backdoor). We never enable that backdoor
+          # (`enable_ssh_backdoor = false`), so on darwin we swap it for a harmless
+          # stand-in to keep the driver evaluatable. On Linux the real dep is used.
+          (lib.optionalAttrs hostIsDarwin {
+            vhost-device-vsock = hostPkgs.emptyDirectory;
+          })
+        ).overrideAttrs (old: {
+          # `vlan.py`'s `_log_stream` forwards the vde_switch / vde_plug2tap pipes to
+          # `logger.debug()` but decodes them as STRICT UTF-8.
+          postPatch = (old.postPatch or "") + ''
+            vlan=$(find . -path '*test_driver/vlan.py' | head -n1)
+            substituteInPlace "$vlan" \
+              --replace-fail ${lib.escapeShellArg "text=True,"} ${lib.escapeShellArg "text=True,\n            errors=\"replace\","}
+          '';
+        });
 
       # create configuration file based on test driver configuration
       # see https://github.com/NixOS/nixpkgs/blob/6ab8a6fd46fa56298ad16ec9b36cf6ab04413459/nixos/lib/test-driver/src/test_driver/driver.py#L38
@@ -246,7 +360,10 @@ rec {
         in
         {
           sandboxed = hostPkgs.stdenv.mkDerivation {
-            requiredSystemFeatures = [ "kvm" "nixos-test" ];
+            # KVM on Linux, Apple's Hypervisor.framework on darwin.
+            requiredSystemFeatures = [ "nixos-test" ]
+              ++ lib.optional hostIsDarwin "apple-virt"
+              ++ lib.optional (!hostIsDarwin) "kvm";
             buildCommand = ''
               ${defaultTest {}}
               touch $out
