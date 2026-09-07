@@ -5,8 +5,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20250624/ubuntu-20.04-server-cloudimg-arm64.img"
     },
     "22_04": {
-      "hash": "1kaw7wq3w0bcrsq9l8jhc3bm2yivmg6hlqwmih7v76i4nv4rlzdi",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20260807/ubuntu-22.04-server-cloudimg-arm64.img"
+      "hash": "13lylyad5dz1721w9d05yb432iqhljgkdpm4wr88dxh7nlb93yw1",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20260826/ubuntu-22.04-server-cloudimg-arm64.img"
     },
     "22_10": {
       "hash": "1ivc5i4pi7vvcz8df0srsy61323vw094flq2qkjn6hicdp00rpp6",
@@ -21,16 +21,16 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240710/ubuntu-23.10-server-cloudimg-arm64.img"
     },
     "24_04": {
-      "hash": "0xh4nxfr9byri40k5smwlcdzs35ixhgq8sw3wkfscpp8arbs0vda",
-      "name": "https://cloud-images.ubuntu.com/releases/noble/release-20260801/ubuntu-24.04-server-cloudimg-arm64.img"
+      "hash": "0gvl2r8a988va92vkg01k1vxk6isbwhk93rg3wg9qqpjqsx3k8dg",
+      "name": "https://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-arm64.img"
     },
     "24_10": {
       "hash": "0zsjvg6zkl95i81v8iw16fqgx6w7zq0fqaph68nri3ricr6i679x",
       "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-arm64.img"
     },
     "26_04": {
-      "hash": "1fl82ybpc97za594wadldpf8fgvrmsr3n5vmjdr177pk87fky49y",
-      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260731/ubuntu-26.04-server-cloudimg-arm64.img"
+      "hash": "1gvl3gva2ww4hc44q07mz0yzwlsmilxswlh90jwmw4kkjgqdkqh0",
+      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260823/ubuntu-26.04-server-cloudimg-arm64.img"
     }
   },
   "x86_64-linux": {
@@ -39,8 +39,8 @@
       "name": "https://cloud-images.ubuntu.com/releases/focal/release-20250624/ubuntu-20.04-server-cloudimg-amd64.img"
     },
     "22_04": {
-      "hash": "1n9a1jblfyy3hylp3d9mjn4xlagcqgly5nv18mvcwy9jla8149zz",
-      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20260807/ubuntu-22.04-server-cloudimg-amd64.img"
+      "hash": "02jgppd4ixnw05byva5qmhgsn781ygzgzqh7zr8n7xy0wqbsz9f0",
+      "name": "https://cloud-images.ubuntu.com/releases/22.04/release-20260826/ubuntu-22.04-server-cloudimg-amd64.img"
     },
     "22_10": {
       "hash": "0yjn4j023psby3a17z8sh1030lyihnjysyagqn916vklpcrjgj34",
@@ -55,16 +55,16 @@
       "name": "https://cloud-images.ubuntu.com/releases/23.10/release-20240710/ubuntu-23.10-server-cloudimg-amd64.img"
     },
     "24_04": {
-      "hash": "1zhg2ka3nlg09y3lci3cafybsnm9zk6ddv4jswqqprijbijv0cq5",
-      "name": "https://cloud-images.ubuntu.com/releases/noble/release-20260801/ubuntu-24.04-server-cloudimg-amd64.img"
+      "hash": "0c0f7yvcjr9f7y9i31py7i610c3g20n8xqkbz8jk91c0byxq9znh",
+      "name": "https://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img"
     },
     "24_10": {
       "hash": "00yars1n82rcxvba8n8krlg32phf36avqprldrj5ypl910r1vwv9",
       "name": "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img"
     },
     "26_04": {
-      "hash": "01dy46g1i8dby2idj6j73jxxzin2h96q7an9l25s0ih17hvcbiwx",
-      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260731/ubuntu-26.04-server-cloudimg-amd64.img"
+      "hash": "0xba1nc3kllinynpmvn0b4zr5zw64d6phv849gpicb12ivva2j22",
+      "name": "https://cloud-images.ubuntu.com/releases/resolute/release-20260823/ubuntu-26.04-server-cloudimg-amd64v3.img"
     }
   }
 }
