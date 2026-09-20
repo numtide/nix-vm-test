@@ -1,23 +1,68 @@
-{ generic, pkgs, lib, system }:
+{ generic, guestPkgs, lib, guestSystem }:
 let
   imagesJSON = lib.importJSON ./images.json;
-  fetchImage = image: pkgs.fetchurl {
+  fetchImage = image: guestPkgs.fetchurl {
     sha256 = image.hash;
     url = image.name;
   };
-  images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest {
+  images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${guestSystem} or {});
+
+  # aarch64 has no guestfs; customize via a cloud-init seed at boot instead (see ubuntu).
+  useCloudInit = generic.guestIsAarch64;
+
+  # Grow the raw cloud image (guestfs-free) when a diskSize is requested. cloud-init's
+  # default `growpart`/`resizefs` modules then grow the partition/filesystem on boot
+  # (unlike the baked path, cloud-init is still active here, so a custom resize
+  # service would just race it and fail with "NOCHANGE: ... it cannot be grown").
+  resizeRawImage = { originalImage, diskSize }:
+    if diskSize == null then originalImage
+    else guestPkgs.runCommand "${originalImage.name}-resized.qcow2"
+      { nativeBuildInputs = [ guestPkgs.qemu ]; } ''
+        install -m644 ${originalImage} "$out"
+        qemu-img resize "$out" ${diskSize}
+      '';
+
+  debianCloudInitSeed = { extraPathsToRegister }:
+    generic.mkCloudInitSeed {
+      files = {
+        "backdoor.service" = generic.backdoor { };
+        "mount-store.service" = generic.mountStore { pathsToRegister = extraPathsToRegister; };
+      };
+      userData = generic.mkUserData {
+        runcmd = [
+          "mkdir -p /run/nixvmtest-seed"
+          "mount -o ro /dev/disk/by-label/CIDATA /run/nixvmtest-seed"
+          "install -m644 /run/nixvmtest-seed/backdoor.service /etc/systemd/system/backdoor.service"
+          "install -m644 /run/nixvmtest-seed/mount-store.service /etc/systemd/system/mount-store.service"
+          "umount /run/nixvmtest-seed"
+          "passwd -d root"
+          "systemctl mask --now serial-getty@${generic.serialConsole}.service serial-getty@hvc0.service"
+          "systemctl mask ssh.service ssh.socket"
+          "systemctl daemon-reload"
+          # Start only the backdoor; its Requires/After pulls mount-store in once
+          # (see ubuntu/default.nix for why activating mount-store separately breaks).
+          "systemctl start backdoor.service"
+        ];
+      };
+    };
+
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest ({
     name = "vm-test-debian_${imageID}";
-    inherit system testScript sharedDirs memorySize cpus;
+    inherit testScript sharedDirs memorySize cpus;
+  } // (if useCloudInit then {
+    image = resizeRawImage { originalImage = image; inherit diskSize; };
+    cloudInitSeed = debianCloudInitSeed { inherit extraPathsToRegister; };
+  } else {
     image = prepareDebianImage {
       inherit diskSize extraPathsToRegister;
-      hostPkgs = pkgs;
+      # Image preparation is Linux work, so it always runs with `guestPkgs`.
+      buildPkgs = guestPkgs;
       originalImage = image;
     };
-  };
-  prepareDebianImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister ? [ ]}:
+  }));
+  prepareDebianImage = { buildPkgs, originalImage, diskSize, extraPathsToRegister ? [ ]}:
     let
-      pkgs = hostPkgs;
+      pkgs = buildPkgs;
       resultImg = "./image.qcow2";
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
@@ -53,7 +98,7 @@ let
           passwd -d root
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl mask serial-getty@ttyS0.service
+          systemctl mask serial-getty@${generic.serialConsole}.service
           systemctl mask serial-getty@hvc0.service
 
           # We have no network in the test VMs, avoid an error on bootup

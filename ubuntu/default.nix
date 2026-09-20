@@ -1,23 +1,82 @@
-{ generic, pkgs, lib, system }:
+{ generic, guestPkgs, lib, guestSystem }:
 let
   imagesJSON = lib.importJSON ./images.json;
-  fetchImage = image: pkgs.fetchurl {
+  fetchImage = image: guestPkgs.fetchurl {
     sha256 = image.hash;
     url = image.name;
   };
-  images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest {
+  images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${guestSystem} or {});
+
+  # `guestfs`/`virt-customize` is unavailable on aarch64, so there we skip the
+  # image bake and customize via a cloud-init seed at boot instead (see below).
+  useCloudInit = generic.guestIsAarch64;
+
+  # Grow the raw cloud image (guestfs-free) when a diskSize is requested. cloud-init's
+  # default `growpart`/`resizefs` modules then grow the partition/filesystem on boot
+  # (unlike the baked path, cloud-init is still active here, so a custom resize
+  # service would just race it and fail with "NOCHANGE: ... it cannot be grown").
+  resizeRawImage = { originalImage, diskSize }:
+    if diskSize == null then originalImage
+    else guestPkgs.runCommand "${originalImage.name}-resized.qcow2"
+      { nativeBuildInputs = [ guestPkgs.qemu ]; } ''
+        install -m644 ${originalImage} "$out"
+        qemu-img resize "$out" ${diskSize}
+      '';
+
+  ubuntuCloudInitSeed = { extraPathsToRegister }:
+    generic.mkCloudInitSeed {
+      files = {
+        "backdoor.service" = generic.backdoor { };
+        "mount-store.service" = generic.mountStore { pathsToRegister = extraPathsToRegister; };
+        # Mirror the sudoers tweak the baked image applies (keeps sudo output clean
+        # for the test driver).
+        "disable-pty" = guestPkgs.writeText "disable-pty" ''
+          Defaults !requiretty
+          Defaults !use_pty
+        '';
+      };
+      userData = generic.mkUserData {
+        runcmd = [
+          "mkdir -p /run/nixvmtest-seed"
+          "mount -o ro /dev/disk/by-label/CIDATA /run/nixvmtest-seed"
+          "install -m644 /run/nixvmtest-seed/backdoor.service /etc/systemd/system/backdoor.service"
+          "install -m644 /run/nixvmtest-seed/mount-store.service /etc/systemd/system/mount-store.service"
+          "install -m440 /run/nixvmtest-seed/disable-pty /etc/sudoers.d/disable-pty"
+          "umount /run/nixvmtest-seed"
+          "passwd -d root"
+          # `--now` also stops any getty already running on these instrumentation
+          # devices, so the backdoor can take over hvc0 without contention.
+          "systemctl mask --now serial-getty@${generic.serialConsole}.service serial-getty@hvc0.service"
+          "systemctl mask snapd.service snapd.socket snapd.seeded.service"
+          "systemctl mask ssh.service ssh.socket"
+          "systemctl daemon-reload"
+          # Start only the backdoor: its Requires/After pulls mount-store into the
+          # same transaction and runs it exactly once. Activating mount-store
+          # separately would re-trigger it (it is a oneshot without RemainAfterExit),
+          # and the second 9p mount fails ("no channels available for device nix-store").
+          "systemctl start backdoor.service"
+        ];
+      };
+    };
+
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest ({
     name = "vm-test-ubuntu_${imageID}";
-    inherit system testScript sharedDirs memorySize cpus;
+    inherit testScript sharedDirs memorySize cpus;
+  } // (if useCloudInit then {
+    image = resizeRawImage { originalImage = image; inherit diskSize; };
+    cloudInitSeed = ubuntuCloudInitSeed { inherit extraPathsToRegister; };
+  } else {
     image = prepareUbuntuImage {
       inherit diskSize extraPathsToRegister;
-      hostPkgs = pkgs;
+      # Image preparation is Linux work (guestfs + guest binaries baked into the
+      # image), so it always runs with the Linux `guestPkgs` set.
+      buildPkgs = guestPkgs;
       originalImage = image;
     };
-  };
-  prepareUbuntuImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
+  }));
+  prepareUbuntuImage = { buildPkgs, originalImage, diskSize, extraPathsToRegister }:
     let
-      pkgs = hostPkgs;
+      pkgs = buildPkgs;
       resultImg = "./image.qcow2";
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
@@ -51,7 +110,7 @@ let
           passwd -d root
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl mask serial-getty@ttyS0.service
+          systemctl mask serial-getty@${generic.serialConsole}.service
           systemctl mask serial-getty@hvc0.service
           # Speed up the boot process
           systemctl mask snapd.service

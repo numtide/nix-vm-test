@@ -1,4 +1,4 @@
-{ pkgs, package, system }:
+{ pkgs, package, guestPkgs, system }:
 let
   lib = package;
   multiUserTest = runner: (runner {
@@ -16,6 +16,9 @@ in {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
+      # Verify the disk-resize service actually grew the disk (rather than
+      # failing silently against the wrong block device).
+      vm.succeed('systemctl show -p Result resizeguest.service | grep -q "Result=success"')
     '';
     diskSize = "+2M";
   }).sandboxed;

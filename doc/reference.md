@@ -103,7 +103,21 @@ $ROOT.$DISTRIBUTION {
 }
 ```
 
-Where `$ROOT` will be `nix-vm-test.lib.x86_64-linux` on a flake-based setup.
+Where `$ROOT` will be `nix-vm-test.lib.<system>` on a flake-based setup.
+
+### Platform support
+
+`<system>` is the **host** system running the driver. Supported hosts:
+
+| Host system      | Guest system    | Acceleration | Notes                                  |
+| ---------------- | --------------- | ------------ | -------------------------------------- |
+| `x86_64-linux`   | `x86_64-linux`  | KVM          |                                        |
+| `aarch64-linux`  | `aarch64-linux` | KVM          |                                        |
+| `aarch64-darwin` | `aarch64-linux` | HVF          | Requires a Linux builder (see README). |
+
+On macOS the VMs run as `aarch64-linux` guests, so only distributions that publish
+an `aarch64` image are available there (**Fedora is x86_64-only and is therefore not
+exposed yet on `aarch64-darwin`**).
 
 Where `$DISTRIBUTION` is a `$NAME.$VERSION` couple. Here's the currently supported name/version couples:
 

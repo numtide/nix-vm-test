@@ -1,4 +1,4 @@
-{ pkgs, package, system }:
+{ pkgs, package, guestPkgs, system }:
 let
   lib = package;
   multiUserTest = runner: (runner {
@@ -16,6 +16,9 @@ in {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
+      # Verify the disk resize didn't leave a failed unit behind (baked path:
+      # our own resizeguest.service; cloud-init path: its built-in growpart).
+      vm.succeed('[ -z "$(systemctl --failed --no-legend)" ]')
     '';
     diskSize = "+2M";
   }).sandboxed;
