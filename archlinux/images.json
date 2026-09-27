@@ -1,0 +1,9 @@
+{
+  "x86_64-linux": {
+    "20260401": {
+      "url": "https://geo.mirror.pkgbuild.com/images/v20260915.594445/Arch-Linux-x86_64-basic-20260915.594445.qcow2",
+      "name": "Arch-Linux-x86_64-basic-20260915.594445.qcow2",
+      "hash": "sha256-5gqZ/TWdN6LZXmhTTUL/H4QkS4eeR3EtxnFGePtn268="
+    }
+  }
+}
