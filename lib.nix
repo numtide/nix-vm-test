@@ -4,7 +4,7 @@
 let
   pkgs = import nixpkgs { inherit system; };
   inherit (nixpkgs) lib;
-  generic = pkgs.callPackage ./generic { inherit nixpkgs; };
+  generic = pkgs.callPackage ./generic { inherit nixpkgs; hostPkgs = pkgs; guestPkgs = pkgs; };
   ubuntu = pkgs.callPackage ./ubuntu { inherit generic system; };
   debian = pkgs.callPackage ./debian { inherit generic system; };
   fedora = pkgs.callPackage ./fedora { inherit generic system; };

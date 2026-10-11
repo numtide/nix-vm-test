@@ -1,5 +1,11 @@
-{ lib, pkgs, nixpkgs }:
+{ lib, hostPkgs, guestPkgs, nixpkgs }:
 rec {
+  # `hostPkgs`  : packages that run on the machine driving the test (QEMU, the
+  #               Python test-driver, the run-vm wrapper script).
+  # `guestPkgs` : packages that run *inside* the Linux guest or are baked into the
+  #               image (backdoor shell, `nix-store`, image preparation).
+  # They are the same package set while the host and the guest share a system.
+
   defaultMachineConfigModule = { ... }: {
     nodes = {
     };
@@ -7,13 +13,13 @@ rec {
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
   # Careful since we do not have the nix store yet when this service runs,
-  # so we cannot use pkgs.writeText or pkgs.writeShellScript for instance,
+  # so we cannot use guestPkgs.writeText or guestPkgs.writeShellScript for instance,
   # since their results would refer to the store
   mountStore = { pathsToRegister ? [ ] }:
     let
-      pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
+      pathRegistrationInfo = "${guestPkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
-    pkgs.writeText "mount-store.service" ''
+    guestPkgs.writeText "mount-store.service" ''
       [Service]
       Type = oneshot
       User = root
@@ -23,12 +29,12 @@ rec {
         mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
         mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
         mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
-        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
+        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin guestPkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
       [Install]
       WantedBy = multi-user.target
     '';
 
-  backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
+  backdoorScript = guestPkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
 
     ProtectSystem=false
@@ -70,7 +76,7 @@ rec {
   #               the backdoor script changes, allow the "builder"
   #               to specify it
   backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
-    pkgs.writeText "backdoor.service" ''
+    guestPkgs.writeText "backdoor.service" ''
       [Unit]
       Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
@@ -85,7 +91,7 @@ rec {
       WantedBy = multi-user.target
     '';
 
-    resizeService = pkgs.writeText "resizeService" ''
+    resizeService = guestPkgs.writeText "resizeService" ''
       [Service]
       Type = oneshot
       ExecStart = apt-get install -yq cloud-guest-utils
@@ -107,9 +113,7 @@ rec {
     , name ? "vm-test"
     }:
     let
-      hostPkgs = pkgs;
-
-      mountSharesScript = pkgs.writeScriptBin "mount-shares" {} ''
+      mountSharesScript = hostPkgs.writeScriptBin "mount-shares" {} ''
       '';
 
       # TODO: hacky hacky… We need to mount the 9p shares at some
