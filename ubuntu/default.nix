@@ -16,67 +16,47 @@ let
     };
   };
   prepareUbuntuImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
-    let
-      pkgs = hostPkgs;
-      resultImg = "./image.qcow2";
-    in
-    pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
-      # We will modify the VM image, so we need a mutable copy
-      install -m777 ${originalImage} ${resultImg}
+    generic.customizeImageInVM {
+      name = "${originalImage.name}-nix-vm-test.qcow2";
+      inherit originalImage diskSize;
+      nativeBuildInputs = [ pkgs.sudo ]; # visudo
+      script = ''
+          # Copy the service files here, since otherwise they end up in the VM
+          # with their paths including the nix hash
+          cp ${generic.backdoor {}} "$mnt/etc/systemd/system/backdoor.service"
+          cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} "$mnt/etc/systemd/system/mount-store.service"
+          cp ${generic.resizeService} "$mnt/etc/systemd/system/resizeguest.service"
 
-      # Copy the service files here, since otherwise they end up in the VM
-      # with their paths including the nix hash
-      cp ${generic.backdoor {}} backdoor.service
-      cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
-      cp ${generic.resizeService} resizeguest.service
-
-      ${lib.optionalString (diskSize != null) ''
-        export PATH="${pkgs.qemu}/bin:$PATH"
-        qemu-img resize ${resultImg} ${diskSize}
-      ''}
-
-      #export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1
-      ${lib.concatStringsSep "  \\\n" [
-        "${pkgs.guestfs-tools}/bin/virt-customize"
-        "-a ${resultImg}"
-        "--smp 2"
-        "--memsize 256"
-        "--no-network"
-        "--copy-in backdoor.service:/etc/systemd/system"
-        "--copy-in mount-store.service:/etc/systemd/system"
-        "--copy-in resizeguest.service:/etc/systemd/system"
-        "--run"
-        (pkgs.writeShellScript "run-script" ''
           # Clear the root password
-          passwd -d root
+          passwd --root "$mnt" -d root
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl mask serial-getty@ttyS0.service
-          systemctl mask serial-getty@hvc0.service
+          systemctl --root="$mnt" mask serial-getty@ttyS0.service
+          systemctl --root="$mnt" mask serial-getty@hvc0.service
           # Speed up the boot process
-          systemctl mask snapd.service
-          systemctl mask snapd.socket
-          systemctl mask snapd.seeded.service
+          systemctl --root="$mnt" mask snapd.service
+          systemctl --root="$mnt" mask snapd.socket
+          systemctl --root="$mnt" mask snapd.seeded.service
 
           # Disable TTY usage in sudo.
           # Otherwise, using sudo spawns a new pty, causing the test-driver to
           # receive mixed stdout and stderr when processing command output.
           # The driver only expects base64-encoded stdout, so extra stderr data
           # can break the output parsing.
-          mkdir -p /etc/sudoers.d
-          cat << EOF > /etc/sudoers.d/disable-pty
+          mkdir -p "$mnt/etc/sudoers.d"
+          cat << EOF > "$mnt/etc/sudoers.d/disable-pty"
           Defaults !requiretty
           Defaults !use_pty
           EOF
-          visudo -cf /etc/sudoers.d/disable-pty
-          chmod 440 /etc/sudoers.d/disable-pty
+          visudo -cf "$mnt/etc/sudoers.d/disable-pty"
+          chmod 440 "$mnt/etc/sudoers.d/disable-pty"
 
           # We have no network in the test VMs, avoid an error on bootup
-          systemctl mask ssh.service
-          systemctl mask ssh.socket
+          systemctl --root="$mnt" mask ssh.service
+          systemctl --root="$mnt" mask ssh.socket
 
 
-          cat << EOF >> /etc/netplan/99_config.yaml
+          cat << EOF >> "$mnt/etc/netplan/99_config.yaml"
           network:
             version: 2
             renderer: networkd
@@ -86,14 +66,11 @@ let
           EOF
 
           ${lib.optionalString (diskSize != null) ''
-            systemctl enable resizeguest.service
+            systemctl --root="$mnt" enable resizeguest.service
           ''}
-          systemctl enable backdoor.service
-        '')
-      ]};
-
-      cp ${resultImg} $out
-    '';
+          systemctl --root="$mnt" enable backdoor.service
+      '';
+    };
 in {
   inherit prepareUbuntuImage;
   images = images;

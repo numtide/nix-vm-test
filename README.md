@@ -52,6 +52,11 @@ You configure **nix-vm-test** using Nix package manager, either in a flake or in
 
 - Hardware KVM acceleration. The project will run without it, but it will be too slow for practical purposes.
 
+The guest image is customized offline inside a short-lived VM (nixpkgs'
+`vmTools.runInLinuxVM`), so the machine that builds it needs the `kvm` Nix system
+feature. On Linux that is the default when `/dev/kvm` is available; without it the
+build falls back to (slow) emulation or is refused.
+
 -----
 
 ## How to use nix-vm-test

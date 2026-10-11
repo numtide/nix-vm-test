@@ -102,6 +102,82 @@ rec {
       WantedBy = multi-user.target
     '';
 
+  # Customize a disk image without libguestfs: boot a tiny Linux VM (nixpkgs'
+  # `vmTools.runInLinuxVM`) with the image attached as a raw virtio disk, mount its
+  # root filesystem and run `script` against it. Unlike `virt-customize` (whose
+  # appliance only exists for x86), this runs on whatever architecture the builder
+  # can run natively, so the same preparation works for x86_64 and aarch64 guests.
+  #
+  # The VM has no udev: the image's partitions show up as /dev/vda<N>.
+  #
+  # `script`        : shell run inside the VM. The image's root is mounted at "$mnt".
+  # `rootPartition` : partition number of the root filesystem. By default it is the
+  #                   largest partition, which is the root in every cloud image we
+  #                   use (its number differs between distros and architectures).
+  # `diskSize`      : if set, enlarge the image to this size (e.g. "10G" or "+2G"), as
+  #                   `qemu-img resize` does. The partition and filesystem are grown
+  #                   by the guest on boot, through the distribution's
+  #                   `resizeguest.service`.
+  # `mountOptions`  : options for mounting the root (e.g. "subvol=root" when the
+  #                   root filesystem is a btrfs subvolume, as on Fedora).
+  # `rootModules`   : kernel modules the VM needs to mount the root (e.g. "btrfs").
+  # `nativeBuildInputs` : extra tools available to `script`.
+  customizeImageInVM =
+    { name
+    , originalImage
+    , script
+    , diskSize ? null
+    , rootPartition ? null
+    , mountOptions ? null
+    , rootModules ? [ ]
+    , nativeBuildInputs ? [ ]
+    , memSize ? 1024
+    }:
+    let
+      vmTools = guestPkgs.vmTools.override {
+        rootModules = [
+          "virtio_pci" "virtio_mmio" "virtio_blk" "virtio_balloon" "virtio_rng"
+          "ext4" "virtiofs" "crc32c"
+        ] ++ rootModules;
+      };
+    in
+    vmTools.runInLinuxVM (guestPkgs.runCommand name
+      {
+        inherit memSize;
+        nativeBuildInputs = [
+          guestPkgs.qemu-utils
+          guestPkgs.util-linux
+          guestPkgs.shadow # `groupadd --root`
+          guestPkgs.systemd # `systemctl --root` to enable/mask units offline
+        ] ++ nativeBuildInputs;
+        preVM = ''
+          diskImage=$PWD/disk.raw
+          qemu-img convert -f qcow2 -O raw ${originalImage} "$diskImage"
+          ${lib.optionalString (diskSize != null) ''qemu-img resize -f raw "$diskImage" ${diskSize}''}
+        '';
+        postVM = ''
+          rm -rf "$out"
+          qemu-img convert -f raw -O qcow2 "$diskImage" "$out"
+        '';
+      }
+      ''
+        ${if rootPartition != null then ''
+          root=/dev/vda${toString rootPartition}
+        '' else ''
+          root=
+          rootSize=0
+          for part in /dev/vda[0-9]*; do
+            size=$(blockdev --getsize64 "$part")
+            if [ "$size" -gt "$rootSize" ]; then root=$part; rootSize=$size; fi
+          done
+        ''}
+        mnt=/mnt
+        mkdir -p "$mnt"
+        mount ${lib.optionalString (mountOptions != null) "-o ${mountOptions}"} "$root" "$mnt"
+        ${script}
+        umount "$mnt"
+      '');
+
   makeVmTest =
     { system
     , image
