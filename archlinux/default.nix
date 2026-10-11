@@ -6,9 +6,9 @@ let
     url = image.url;
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ] }: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-archlinux_${imageID}";
-    inherit system testScript sharedDirs;
+    inherit system testScript sharedDirs memorySize cpus;
     image = prepareArchlinuxImage {
       inherit diskSize extraPathsToRegister;
       hostPkgs = pkgs;
