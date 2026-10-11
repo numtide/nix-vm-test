@@ -7,11 +7,11 @@ let
   };
 
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-rocky_${imageID}";
     inherit system testScript sharedDirs memorySize cpus;
     image = prepareRockyImage {
-      inherit diskSize extraPathsToRegister;
+      inherit diskSize extraPathsToRegister selinuxEnforcing;
       hostPkgs = pkgs;
       originalImage = image;
     };
@@ -54,12 +54,13 @@ let
     [ -f /etc/dnf/vars/contentdir ] && sed -i 's@pub/rocky@vault/rocky@g' /etc/dnf/vars/contentdir
   '';
 
-  prepareRockyImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister }:
+  prepareRockyImage = { hostPkgs, originalImage, diskSize, extraPathsToRegister, selinuxEnforcing ? true }:
     generic.customizeImageInVM {
       name = "${originalImage.name}-nix-vm-test.qcow2";
       inherit originalImage diskSize;
       # The root filesystem is XFS.
       rootModules = [ "xfs" ];
+      nativeBuildInputs = [ pkgs.policycoreutils ]; # setfiles
       script = ''
           # Copy the service files here, since otherwise they end up in the VM
           # with their paths including the nix hash
@@ -105,9 +106,14 @@ let
           # (a clean PATH: the one inherited from this VM only has nix store paths)
           chroot "$mnt" /usr/bin/env -i PATH=/usr/bin:/usr/sbin /bin/bash -c ${lib.escapeShellArg rockyFixReposScriptText}
 
-          # Files written from here carry no SELinux labels, which an enforcing policy
-          # would deny the backdoor service: boot permissive.
-          sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' "$mnt/etc/selinux/config"
+          ${lib.optionalString (!selinuxEnforcing) ''
+            sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' "$mnt/etc/selinux/config"
+          ''}
+          ${lib.optionalString selinuxEnforcing ''
+            # Keep this last: it labels the files written above, including the unit
+            # symlink `enable` just created.
+            ${generic.selinuxRelabel ''"$mnt/usr/bin/backdoorScript" "$mnt/etc"''}
+          ''}
       '';
     };
 in {

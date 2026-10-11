@@ -149,6 +149,7 @@ Where:
 | sharedDirs     | This attribute set describes the host directories that will be mounted to the guest filesystem. `source` being the host directory, `target` being the path we want to mount the directory on the VM.                                                                                | See above example |
 | memorySize     | Memory available to the guest VM, in MiB. Defaults to 1024.                                                                                                                                                                                                                          | 2048              |
 | cpus           | Number of virtual CPUs available to the guest VM. Defaults to 2.                                                                                                                                                                                                                     | 4                 |
+| selinuxEnforcing | Fedora and Rocky only. Boot with SELinux in enforcing mode instead of permissive. Defaults to `true` on Rocky and `false` on Fedora. | `false` |
 | testScript     | A Python script used to orchestrate the integration test. This is compatible with NixOS tests. You can have a look at the [relevant NixOS manual section](https://nixos.org/manual/nixos/stable/#ssec-machine-objects) to get the reference documentation of the available methods. | See above example |
 
 #### Outputs

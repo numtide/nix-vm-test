@@ -37,6 +37,7 @@ let
       # The root filesystem is a btrfs subvolume named `root` (next to `home` and `var`).
       mountOptions = "subvol=root";
       rootModules = [ "btrfs" "xor" "raid6_pq" "zstd_compress" ];
+      nativeBuildInputs = [ pkgs.policycoreutils ]; # setfiles
       script = ''
           # Copy the service files here, since otherwise they end up in the VM
           # with their paths including the nix hash
@@ -79,6 +80,11 @@ let
 
           ${lib.optionalString (!selinuxEnforcing) ''
             sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' "$mnt/etc/selinux/config"
+          ''}
+          ${lib.optionalString selinuxEnforcing ''
+            # Keep this last: it labels the files written above, including the unit
+            # symlink `enable` just created.
+            ${generic.selinuxRelabel ''"$mnt/usr/bin/backdoorScript" "$mnt/etc"''}
           ''}
       '';
     };

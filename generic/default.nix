@@ -178,6 +178,16 @@ rec {
         umount "$mnt"
       '');
 
+  # Shell fragment for `customizeImageInVM` scripts: give the files written under
+  # the given paths of an SELinux image (mounted at "$mnt") their proper labels.
+  # The customization VM does not run SELinux, so everything it creates is
+  # unlabeled, which an enforcing policy would deny at boot. `virt-customize` used
+  # to relabel the whole image; relabelling only what we touch is much cheaper.
+  # Needs `policycoreutils` in `nativeBuildInputs`.
+  selinuxRelabel = paths: ''
+    setfiles -F -r "$mnt" "$mnt/etc/selinux/targeted/contexts/files/file_contexts" ${paths}
+  '';
+
   makeVmTest =
     { system
     , image
