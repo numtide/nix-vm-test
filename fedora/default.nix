@@ -23,7 +23,7 @@ let
   resizeService = pkgs.writeText "resizeService" ''
     [Service]
     Type = oneshot
-    ExecStart = growpart /dev/sda 5
+    ExecStart = growpart ${generic.diskDevice} 5
     ExecStart = btrfs filesystem resize max /
 
     [Install]
@@ -56,7 +56,7 @@ let
           groupadd --root "$mnt" nixbld
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl --root="$mnt" mask serial-getty@ttyS0.service
+          systemctl --root="$mnt" mask serial-getty@${generic.serialConsole}.service
           systemctl --root="$mnt" mask serial-getty@hvc0.service
 
           # We have no network in the test VMs, avoid an error on bootup
@@ -65,9 +65,9 @@ let
 
           # Retrieve guest interface conf via DHCP
           mkdir -p "$mnt/etc/systemd/network"
-          cat << EOF >> "$mnt/etc/systemd/network/80-ens4.network"
+          cat << EOF >> "$mnt/etc/systemd/network/80-${generic.nicName}.network"
           [Match]
-          Name=ens4
+          Name=${generic.nicName}
 
           [Network]
           DHCP=yes

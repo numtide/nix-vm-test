@@ -6,6 +6,8 @@ rec {
   #               image (backdoor shell, `nix-store`, image preparation).
   # They are the same package set while the host and the guest share a system.
   qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
+  guestIsAarch64 = guestPkgs.stdenv.hostPlatform.isAarch64;
+  serialConsole = if guestIsAarch64 then "ttyAMA0" else "ttyS0";
 
   defaultMachineConfigModule = { ... }: {
     nodes = {
@@ -55,7 +57,7 @@ rec {
 
     cd /tmp
     exec < /dev/hvc0 > /dev/hvc0
-    while ! exec 2> /dev/ttyS0; do sleep 0.1; done
+    while ! exec 2> /dev/${serialConsole}; do sleep 0.1; done
     echo "connecting to host..." >&2
     stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
     # This line is essential since it signals to the test driver that the
@@ -79,8 +81,8 @@ rec {
   backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
     guestPkgs.writeText "backdoor.service" ''
       [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
-      After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      Requires = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      After = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       # Keep this unit active when we switch to rescue mode for instance
       IgnoreOnIsolate = true
 
@@ -92,12 +94,20 @@ rec {
       WantedBy = multi-user.target
     '';
 
+    # The block device of the image inside the guest: IDE/SATA (sda) on x86_64,
+    # virtio (vda) on aarch64, see the disk flags of the runner below.
+    diskDevice = if guestIsAarch64 then "/dev/vda" else "/dev/sda";
+
+    # The name the guest gives its NIC, which comes from its PCI slot: ens4 on
+    # x86_64, enp0s3 on aarch64 (the same on every distribution we ship).
+    nicName = if guestIsAarch64 then "enp0s3" else "ens4";
+
     resizeService = guestPkgs.writeText "resizeService" ''
       [Service]
       Type = oneshot
       ExecStart = apt-get install -yq cloud-guest-utils
-      ExecStart = growpart /dev/sda 1
-      ExecStart = resize2fs /dev/sda1
+      ExecStart = growpart ${diskDevice} 1
+      ExecStart = resize2fs ${diskDevice}1
 
       [Install]
       WantedBy = multi-user.target
@@ -251,6 +261,36 @@ rec {
 
         qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
 
+        machineFlags =
+          if guestIsAarch64 then
+            [ "-machine virt,accel=${accel}" ]
+          else
+            [ "-machine accel=${accel}" ];
+
+        firmwareFlags = lib.optionals guestIsAarch64 [
+          "-drive if=pflash,format=raw,unit=0,readonly=on,file=${qemupkg}/share/qemu/edk2-aarch64-code.fd"
+          "-drive if=pflash,format=raw,unit=1,file=\"$TMPDIR/efivars.fd\""
+        ];
+
+        diskFlags =
+          if guestIsAarch64 then
+            [ "-drive if=none,file=${image},format=qcow2,id=disk0"
+              "-device virtio-blk-pci,drive=disk0"
+            ]
+          else
+            [ "-drive file=${image},format=qcow2" ];
+
+        # On aarch64 UEFI, disable the NIC's option ROM via romfile=. Without this,
+        # every boot prints "Image type X64 can't be loaded on AARCH64 UEFI system."
+        # while EDK2 tries (and fails) to load the ROM's x86 EFI section — harmless
+        # (the disk still boots normally) but noisy on every single boot. We never
+        # PXE-boot, so dropping the ROM outright is safe and removes the warning.
+        netDevFlag =
+          if guestIsAarch64 then
+            "-device virtio-net-pci,netdev=net0,romfile="
+          else
+            "-device virtio-net-pci,netdev=net0";
+
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
@@ -284,18 +324,25 @@ rec {
           mkdir -p "$TMPDIR/xchg"
 
           cd "$TMPDIR"
+          ${lib.optionalString guestIsAarch64 ''
+            # Writable UEFI variable store for the aarch64 firmware above: a blank
+            # file of the same size as the firmware code image (64 MiB), which the
+            # firmware initializes on first use. It is created anew on every start
+            # (in a fresh $TMPDIR), so nothing persists from one run to the next.
+            truncate -s 64M "$TMPDIR/efivars.fd"
+          ''}
 
           # Start QEMU.
-          ${lib.concatStringsSep "\\\n  " [
+          ${lib.concatStringsSep "\\\n  " ([
             "exec ${qemuBinary}"
-            "-machine accel=${accel}"
+          ] ++ machineFlags ++ [
             "-device virtio-rng-pci"
             "-cpu max"
             "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
-            "-drive file=${image},format=qcow2"
-            "-device virtio-net-pci,netdev=net0"
+          ] ++ firmwareFlags ++ diskFlags ++ [
+            netDevFlag
             "-netdev user,id=net0"
             "-virtfs local,security_model=passthrough,id=fsdev1,path=/nix/store,readonly=on,mount_tag=nix-store"
             (lib.concatStringsSep "\\\n  "
@@ -306,7 +353,7 @@ rec {
             (lib.optionalString (!interactive) "-nographic")
             "$QEMU_OPTS"
             "$@"
-          ]};
+          ])};
         '';
 
       test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };

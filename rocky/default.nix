@@ -6,7 +6,24 @@ let
     url = image.url;
   };
 
-  images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
+  # Rocky/RHEL 8.x aarch64 kernels are built with 64 KB memory pages. Not every
+  # aarch64 CPU implements that translation granule (notably Apple Silicon, which
+  # only supports 4 KB/16 KB) — on one that doesn't, the kernel's EFI stub refuses
+  # to boot ("64 KB granular kernel is not supported by your CPU") and the VM just
+  # hangs. This is a guest-architecture concern, not a darwin-specific one (e.g. an
+  # aarch64-linux host with a similarly-limited CPU would hit it too), so filter
+  # for any aarch64 guest rather than only when the host happens to be darwin.
+  #
+  # The aarch64 9.0 image is also unusable: the XFS allocation group headers past
+  # the first one are blank in the published file, so no kernel can mount its root
+  # (it hangs at boot regardless of how the image is prepared).
+  imagesForSystem = imagesJSON.${system} or {};
+  unsupportedOnAarch64 = name: lib.hasPrefix "8_" name || name == "9_0";
+  supportedImages =
+    if generic.guestIsAarch64
+    then lib.filterAttrs (name: _: !(unsupportedOnAarch64 name)) imagesForSystem
+    else imagesForSystem;
+  images = lib.mapAttrs (k: v: fetchImage v) supportedImages;
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-rocky_${imageID}";
     inherit system testScript sharedDirs memorySize cpus;
@@ -20,7 +37,7 @@ let
   resizeService = pkgs.writeText "resizeService" ''
     [Service]
     Type = oneshot
-    ExecStart = growpart /dev/sda 1
+    ExecStart = growpart ${generic.diskDevice} 1
     ExecStart = xfs_growfs /
 
     [Install]
@@ -81,7 +98,7 @@ let
           groupadd --root "$mnt" nixbld
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl --root="$mnt" mask serial-getty@ttyS0.service
+          systemctl --root="$mnt" mask serial-getty@${generic.serialConsole}.service
           systemctl --root="$mnt" mask serial-getty@hvc0.service
 
           # We have no network in the test VMs, avoid an error on bootup
@@ -90,9 +107,9 @@ let
 
           # Retrieve guest interface conf via DHCP
           mkdir -p "$mnt/etc/systemd/network"
-          cat << EOF >> "$mnt/etc/systemd/network/80-ens4.network"
+          cat << EOF >> "$mnt/etc/systemd/network/80-${generic.nicName}.network"
           [Match]
-          Name=ens4
+          Name=${generic.nicName}
 
           [Network]
           DHCP=yes

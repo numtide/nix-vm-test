@@ -20,7 +20,7 @@ let
   resizeService = pkgs.writeText "resizeService" ''
     [Service]
     Type = oneshot
-    ExecStart = /bin/sh -euc 'sfdisk --relocate=gpt-bak-std /dev/sda; echo ",+" | sfdisk --no-reread --force -N 3 /dev/sda; partx -u /dev/sda; btrfs filesystem resize max /'
+    ExecStart = /bin/sh -euc 'sfdisk --relocate=gpt-bak-std ${generic.diskDevice}; echo ",+" | sfdisk --no-reread --force -N 3 ${generic.diskDevice}; partx -u ${generic.diskDevice}; btrfs filesystem resize max /'
 
     [Install]
     WantedBy = multi-user.target

@@ -7,19 +7,25 @@
 
   outputs = { self, nixpkgs }:
     let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
+      inherit (nixpkgs) lib;
+
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = f: lib.genAttrs supportedSystems f;
+
+      pkgsFor = system: import nixpkgs {
         overlays = [ self.overlays.default ];
         localSystem = system;
       };
     in
     {
-      lib.${system} = pkgs.testers.nonNixOSDistros;
+      lib = forAllSystems (system: (pkgsFor system).testers.nonNixOSDistros);
 
-      checks.${system} = import ./tests {
-        package = pkgs.testers.nonNixOSDistros;
-        inherit pkgs system;
-      };
+      checks = forAllSystems (system:
+        import ./tests {
+          package = (pkgsFor system).testers.nonNixOSDistros;
+          pkgs = pkgsFor system;
+          inherit system;
+        });
 
       overlays.default = import ./overlay.nix;
     };

@@ -31,7 +31,7 @@ let
           passwd --root "$mnt" -d root
 
           # Don't spawn ttys on these devices, they are used for test instrumentation
-          systemctl --root="$mnt" mask serial-getty@ttyS0.service
+          systemctl --root="$mnt" mask serial-getty@${generic.serialConsole}.service
           systemctl --root="$mnt" mask serial-getty@hvc0.service
           # Speed up the boot process
           systemctl --root="$mnt" mask snapd.service
@@ -61,7 +61,7 @@ let
             version: 2
             renderer: networkd
             ethernets:
-              ens4:
+              ${generic.nicName}:
                 dhcp4: true
           EOF
 
