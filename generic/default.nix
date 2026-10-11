@@ -5,6 +5,7 @@ rec {
   # `guestPkgs` : packages that run *inside* the Linux guest or are baked into the
   #               image (backdoor shell, `nix-store`, image preparation).
   # They are the same package set while the host and the guest share a system.
+  qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
 
   defaultMachineConfigModule = { ... }: {
     nodes = {
@@ -242,6 +243,14 @@ rec {
       runVmScript = interactive: node:
       let
         qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
+
+        # KVM when the host has it. On a Linux host without /dev/kvm (e.g. GitHub's
+        # hosted arm64 runners) QEMU falls back to TCG emulation: slow, but it runs,
+        # as nixpkgs' own `accel=kvm:tcg` does.
+        accel = "kvm:tcg";
+
+        qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
+
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
@@ -277,11 +286,9 @@ rec {
           cd "$TMPDIR"
 
           # Start QEMU.
-          # We might need to be smarter about the QEMU binary to run when we want to
-          # support architectures other than x86_64.
-          # See qemu-common.nix in nixpkgs.
           ${lib.concatStringsSep "\\\n  " [
-            "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
+            "exec ${qemuBinary}"
+            "-machine accel=${accel}"
             "-device virtio-rng-pci"
             "-cpu max"
             "-name vm"
