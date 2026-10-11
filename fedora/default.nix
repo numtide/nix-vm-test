@@ -1,9 +1,13 @@
 { generic, pkgs, lib, system }:
 let
   imagesJSON = lib.importJSON ./images.json;
+  # Releases move from the live tree to the archive once they are EOL, so try both.
   fetchImage = image: pkgs.fetchurl {
     inherit (image) hash;
-    url = "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}";
+    urls = [
+      "https://download.fedoraproject.org/pub/fedora/linux/releases/${image.name}"
+      "https://dl.fedoraproject.org/pub/archive/fedora/linux/releases/${image.name}"
+    ];
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? false, memorySize ? null, cpus ? null }: generic.makeVmTest {
