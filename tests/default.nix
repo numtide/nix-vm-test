@@ -1,9 +1,9 @@
-{ package, pkgs, system }:
+{ package, pkgs, guestPkgs, system }:
 let
   lib = pkgs.lib;
   addPrefixToTests = prefix: tests: lib.mapAttrs' (n: v: lib.nameValuePair (prefix + n) v) tests;
 
-  args = { inherit package pkgs system; };
+  args = { inherit package pkgs guestPkgs system; };
 
   distros = {
     ubuntu = ./ubuntu.nix;

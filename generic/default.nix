@@ -1,12 +1,15 @@
 { lib, hostPkgs, guestPkgs, nixpkgs }:
 rec {
   # `hostPkgs`  : packages that run on the machine driving the test (QEMU, the
-  #               Python test-driver, the run-vm wrapper script).
+  #               Python test-driver, the run-vm wrapper script). On a Linux host
+  #               this is the same as `guestPkgs`; on darwin it is a darwin set.
   # `guestPkgs` : packages that run *inside* the Linux guest or are baked into the
-  #               image (backdoor shell, `nix-store`, image preparation).
-  # They are the same package set while the host and the guest share a system.
+  #               image (backdoor shell, `nix-store`, image preparation). These must
+  #               always be Linux packages, so on darwin they are built for the
+  #               matching `*-linux` system (via a Linux/remote builder).
   qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
   guestIsAarch64 = guestPkgs.stdenv.hostPlatform.isAarch64;
+  hostIsDarwin = hostPkgs.stdenv.hostPlatform.isDarwin;
   serialConsole = if guestIsAarch64 then "ttyAMA0" else "ttyS0";
 
   defaultMachineConfigModule = { ... }: {
@@ -254,10 +257,13 @@ rec {
       let
         qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
 
-        # KVM when the host has it. On a Linux host without /dev/kvm (e.g. GitHub's
+        # On darwin we accelerate with Apple's Hypervisor.framework (HVF); on Linux
+        # with KVM. We only ever pair a host with a same-architecture Linux guest
+        # (e.g. aarch64-darwin → aarch64-linux), so hardware acceleration applies
+        # whenever the host has it. On a Linux host without /dev/kvm (e.g. GitHub's
         # hosted arm64 runners) QEMU falls back to TCG emulation: slow, but it runs,
         # as nixpkgs' own `accel=kvm:tcg` does.
-        accel = "kvm:tcg";
+        accel = if hostIsDarwin then "hvf" else "kvm:tcg";
 
         qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
 
@@ -356,7 +362,24 @@ rec {
           ])};
         '';
 
-      test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
+      test-driver =
+        (hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver"
+          # `vhost-device-vsock` is a Linux-only dependency of the test driver (used
+          # for the vsock SSH backdoor). We never enable that backdoor
+          # (`enable_ssh_backdoor = false`), so on darwin we swap it for a harmless
+          # stand-in to keep the driver evaluatable. On Linux the real dep is used.
+          (lib.optionalAttrs hostIsDarwin {
+            vhost-device-vsock = hostPkgs.emptyDirectory;
+          })
+        ).overrideAttrs (old: {
+          # `vlan.py`'s `_log_stream` forwards the vde_switch / vde_plug2tap pipes to
+          # `logger.debug()` but decodes them as STRICT UTF-8.
+          postPatch = (old.postPatch or "") + ''
+            vlan=$(find . -path '*test_driver/vlan.py' | head -n1)
+            substituteInPlace "$vlan" \
+              --replace-fail ${lib.escapeShellArg "text=True,"} ${lib.escapeShellArg "text=True,\n            errors=\"replace\","}
+          '';
+        });
 
       # create configuration file based on test driver configuration
       # see https://github.com/NixOS/nixpkgs/blob/6ab8a6fd46fa56298ad16ec9b36cf6ab04413459/nixos/lib/test-driver/src/test_driver/driver.py#L38
@@ -390,7 +413,10 @@ rec {
         in
         {
           sandboxed = hostPkgs.stdenv.mkDerivation {
-            requiredSystemFeatures = [ "kvm" "nixos-test" ];
+            # KVM on Linux, Apple's Hypervisor.framework on darwin.
+            requiredSystemFeatures = [ "nixos-test" ]
+              ++ lib.optional hostIsDarwin "apple-virt"
+              ++ lib.optional (!hostIsDarwin) "kvm";
             buildCommand = ''
               ${defaultTest {}}
               touch $out

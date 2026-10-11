@@ -107,19 +107,20 @@ Where `$ROOT` will be `nix-vm-test.lib.<system>` on a flake-based setup.
 
 ### Platform support
 
-`<system>` is the system of the machine running the tests, and the VMs run as guests
-of the same architecture:
+`<system>` is the **host** system running the driver. Supported hosts:
 
-| System          | Guest system    | Acceleration |
-| --------------- | --------------- | ------------ |
-| `x86_64-linux`  | `x86_64-linux`  | KVM          |
-| `aarch64-linux` | `aarch64-linux` | KVM          |
+| Host system      | Guest system    | Acceleration | Notes                                  |
+| ---------------- | --------------- | ------------ | -------------------------------------- |
+| `x86_64-linux`   | `x86_64-linux`  | KVM          |                                        |
+| `aarch64-linux`  | `aarch64-linux` | KVM          |                                        |
+| `aarch64-darwin` | `aarch64-linux` | HVF          | Requires a Linux builder (see README). |
 
-Only the distributions that publish an image for the guest's architecture are
-available: Arch Linux is x86_64-only, and Fedora is only available as release 43 on
-aarch64 (the older aarch64 releases are no longer on the release mirror). The Rocky
-8.x and 9.0 aarch64 images are skipped (8.x kernels use 64 KB pages, which not every
-aarch64 CPU supports, and the 9.0 image is damaged).
+On macOS the VMs run as `aarch64-linux` guests, so only distributions that publish
+an `aarch64` image are available there. **Arch Linux is x86_64-only and is therefore
+not exposed on `aarch64-darwin`**, and Fedora is only available as release 43 there
+(older aarch64 releases are no longer on the release mirror). The Rocky 8.x and 9.0
+aarch64 images are skipped (8.x needs 64 KB pages, which Apple Silicon lacks; the 9.0
+image is damaged).
 
 Where `$DISTRIBUTION` is a `$NAME.$VERSION` couple. Here's the currently supported name/version couples:
 

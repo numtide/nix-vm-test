@@ -9,13 +9,21 @@
     let
       inherit (nixpkgs) lib;
 
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
       forAllSystems = f: lib.genAttrs supportedSystems f;
+      guestSystemFor = import ./systems.nix;
 
       pkgsFor = system: import nixpkgs {
         overlays = [ self.overlays.default ];
         localSystem = system;
       };
+      # Reuse the host's own evaluation when the guest matches it (the common,
+      # non-darwin case), instead of importing nixpkgs a second time from scratch.
+      guestPkgsFor = system:
+        let guestSystem = guestSystemFor system;
+        in if guestSystem == system
+          then pkgsFor system
+          else import nixpkgs { localSystem = guestSystem; };
     in
     {
       lib = forAllSystems (system: (pkgsFor system).testers.nonNixOSDistros);
@@ -24,6 +32,7 @@
         import ./tests {
           package = (pkgsFor system).testers.nonNixOSDistros;
           pkgs = pkgsFor system;
+          guestPkgs = guestPkgsFor system;
           inherit system;
         });
 
