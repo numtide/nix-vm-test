@@ -178,6 +178,11 @@ rec {
         ${if rootPartition != null then ''
           root=/dev/vda${toString rootPartition}
         '' else ''
+          # No explicit partition: assume the root filesystem is the largest one.
+          # On every cloud image we ship this holds: the other partitions are the
+          # (smaller) EFI system partition and, where present, a boot/reserved
+          # one, and the root spans the rest of the disk. This avoids hardcoding
+          # a partition number that differs per distribution and architecture.
           root=
           rootSize=0
           for part in /dev/vda[0-9]*; do
