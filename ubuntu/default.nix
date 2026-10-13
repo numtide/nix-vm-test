@@ -8,7 +8,7 @@ let
   images = lib.mapAttrs (k: v: fetchImage v) imagesJSON.${system};
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-ubuntu_${imageID}";
-    inherit system testScript sharedDirs memorySize cpus;
+    inherit testScript sharedDirs memorySize cpus;
     image = prepareUbuntuImage {
       inherit diskSize extraPathsToRegister;
       hostPkgs = pkgs;

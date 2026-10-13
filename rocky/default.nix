@@ -26,7 +26,7 @@ let
   images = lib.mapAttrs (k: v: fetchImage v) supportedImages;
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null }: generic.makeVmTest {
     name = "vm-test-rocky_${imageID}";
-    inherit system testScript sharedDirs memorySize cpus;
+    inherit testScript sharedDirs memorySize cpus;
     image = prepareRockyImage {
       inherit diskSize extraPathsToRegister selinuxEnforcing;
       hostPkgs = pkgs;
