@@ -9,9 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: NixOS/nix-installer-action@main
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          extra-conf: |
+            nix-path = nixpkgs=channel:nixos-unstable
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Run update-images.py
         run: |
