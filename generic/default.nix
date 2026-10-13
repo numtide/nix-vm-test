@@ -1,5 +1,17 @@
-{ lib, pkgs, nixpkgs }:
+{ lib, hostPkgs, guestPkgs, nixpkgs }:
 rec {
+  # `hostPkgs`  : packages that run on the machine driving the test (QEMU, the
+  #               Python test-driver, the run-vm wrapper script). On a Linux host
+  #               this is the same as `guestPkgs`; on darwin it is a darwin set.
+  # `guestPkgs` : packages that run *inside* the Linux guest or are baked into the
+  #               image (backdoor shell, `nix-store`, image preparation). These must
+  #               always be Linux packages, so on darwin they are built for the
+  #               matching `*-linux` system (via a Linux/remote builder).
+  qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
+  guestIsAarch64 = guestPkgs.stdenv.hostPlatform.isAarch64;
+  hostIsDarwin = hostPkgs.stdenv.hostPlatform.isDarwin;
+  serialConsole = if guestIsAarch64 then "ttyAMA0" else "ttyS0";
+
   defaultMachineConfigModule = { ... }: {
     nodes = {
     };
@@ -7,13 +19,13 @@ rec {
   printAttrPos = { file, line, column }: "${file}:${toString line}:${toString column}";
 
   # Careful since we do not have the nix store yet when this service runs,
-  # so we cannot use pkgs.writeText or pkgs.writeShellScript for instance,
+  # so we cannot use guestPkgs.writeText or guestPkgs.writeShellScript for instance,
   # since their results would refer to the store
   mountStore = { pathsToRegister ? [ ] }:
     let
-      pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
+      pathRegistrationInfo = "${guestPkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
     in
-    pkgs.writeText "mount-store.service" ''
+    guestPkgs.writeText "mount-store.service" ''
       [Service]
       Type = oneshot
       User = root
@@ -23,12 +35,12 @@ rec {
         mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
         mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
         mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
-        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
+        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin guestPkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
       [Install]
       WantedBy = multi-user.target
     '';
 
-  backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
+  backdoorScript = guestPkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
 
     ProtectSystem=false
@@ -48,7 +60,7 @@ rec {
 
     cd /tmp
     exec < /dev/hvc0 > /dev/hvc0
-    while ! exec 2> /dev/ttyS0; do sleep 0.1; done
+    while ! exec 2> /dev/${serialConsole}; do sleep 0.1; done
     echo "connecting to host..." >&2
     stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
     # This line is essential since it signals to the test driver that the
@@ -70,10 +82,10 @@ rec {
   #               the backdoor script changes, allow the "builder"
   #               to specify it
   backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
-    pkgs.writeText "backdoor.service" ''
+    guestPkgs.writeText "backdoor.service" ''
       [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
-      After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      Requires = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      After = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       # Keep this unit active when we switch to rescue mode for instance
       IgnoreOnIsolate = true
 
@@ -85,20 +97,118 @@ rec {
       WantedBy = multi-user.target
     '';
 
-    resizeService = pkgs.writeText "resizeService" ''
+    # The block device of the image inside the guest: IDE/SATA (sda) on x86_64,
+    # virtio (vda) on aarch64, see the disk flags of the runner below.
+    diskDevice = if guestIsAarch64 then "/dev/vda" else "/dev/sda";
+
+    # The name the guest gives its NIC, which comes from its PCI slot: ens4 on
+    # x86_64, enp0s3 on aarch64 (the same on every distribution we ship).
+    nicName = if guestIsAarch64 then "enp0s3" else "ens4";
+
+    resizeService = guestPkgs.writeText "resizeService" ''
       [Service]
       Type = oneshot
       ExecStart = apt-get install -yq cloud-guest-utils
-      ExecStart = growpart /dev/sda 1
-      ExecStart = resize2fs /dev/sda1
+      ExecStart = growpart ${diskDevice} 1
+      ExecStart = resize2fs ${diskDevice}1
 
       [Install]
       WantedBy = multi-user.target
     '';
 
+  # Customize a disk image without libguestfs: boot a tiny Linux VM (nixpkgs'
+  # `vmTools.runInLinuxVM`) with the image attached as a raw virtio disk, mount its
+  # root filesystem and run `script` against it. Unlike `virt-customize` (whose
+  # appliance only exists for x86), this runs on whatever architecture the builder
+  # can run natively, so the same preparation works for x86_64 and aarch64 guests.
+  #
+  # The VM has no udev: the image's partitions show up as /dev/vda<N>.
+  #
+  # `script`        : shell run inside the VM. The image's root is mounted at "$mnt".
+  # `rootPartition` : partition number of the root filesystem. By default it is the
+  #                   largest partition, which is the root in every cloud image we
+  #                   use (its number differs between distros and architectures).
+  # `diskSize`      : if set, enlarge the image to this size (e.g. "10G" or "+2G"), as
+  #                   `qemu-img resize` does. The partition and filesystem are grown
+  #                   by the guest on boot, through the distribution's
+  #                   `resizeguest.service`.
+  # `mountOptions`  : options for mounting the root (e.g. "subvol=root" when the
+  #                   root filesystem is a btrfs subvolume, as on Fedora).
+  # `rootModules`   : kernel modules the VM needs to mount the root (e.g. "btrfs").
+  # `nativeBuildInputs` : extra tools available to `script`.
+  customizeImageInVM =
+    { name
+    , originalImage
+    , script
+    , diskSize ? null
+    , rootPartition ? null
+    , mountOptions ? null
+    , rootModules ? [ ]
+    , nativeBuildInputs ? [ ]
+    , memSize ? 1024
+    }:
+    let
+      vmTools = guestPkgs.vmTools.override {
+        rootModules = [
+          "virtio_pci" "virtio_mmio" "virtio_blk" "virtio_balloon" "virtio_rng"
+          "ext4" "virtiofs" "crc32c"
+        ] ++ rootModules;
+      };
+    in
+    vmTools.runInLinuxVM (guestPkgs.runCommand name
+      {
+        inherit memSize;
+        nativeBuildInputs = [
+          guestPkgs.qemu-utils
+          guestPkgs.util-linux
+          guestPkgs.shadow # `groupadd --root`
+          guestPkgs.systemd # `systemctl --root` to enable/mask units offline
+        ] ++ nativeBuildInputs;
+        preVM = ''
+          diskImage=$PWD/disk.raw
+          qemu-img convert -f qcow2 -O raw ${originalImage} "$diskImage"
+          ${lib.optionalString (diskSize != null) ''qemu-img resize -f raw "$diskImage" ${diskSize}''}
+        '';
+        postVM = ''
+          rm -rf "$out"
+          qemu-img convert -f raw -O qcow2 "$diskImage" "$out"
+        '';
+      }
+      ''
+        ${if rootPartition != null then ''
+          root=/dev/vda${toString rootPartition}
+        '' else ''
+          # No explicit partition: assume the root filesystem is the largest one.
+          # On every cloud image we ship this holds: the other partitions are the
+          # (smaller) EFI system partition and, where present, a boot/reserved
+          # one, and the root spans the rest of the disk. This avoids hardcoding
+          # a partition number that differs per distribution and architecture.
+          root=
+          rootSize=0
+          for part in /dev/vda[0-9]*; do
+            size=$(blockdev --getsize64 "$part")
+            if [ "$size" -gt "$rootSize" ]; then root=$part; rootSize=$size; fi
+          done
+        ''}
+        mnt=/mnt
+        mkdir -p "$mnt"
+        mount ${lib.optionalString (mountOptions != null) "-o ${mountOptions}"} "$root" "$mnt"
+        ${script}
+        umount "$mnt"
+      '');
+
+  # Shell fragment for `customizeImageInVM` scripts: give the files written under
+  # the given paths of an SELinux image (mounted at "$mnt") their proper labels.
+  # The customization VM does not run SELinux, so everything it creates is
+  # unlabeled, which an enforcing policy would deny at boot. `virt-customize` used
+  # to relabel the whole image; relabelling only what we touch is much cheaper.
+  # Needs `policycoreutils` in `nativeBuildInputs`.
+  selinuxRelabel = paths: ''
+    setfiles -F -r "$mnt" "$mnt/etc/selinux/targeted/contexts/files/file_contexts" ${paths}
+  '';
+
   makeVmTest =
-    { system
-    , image
+    { image
     , testScript
     , sharedDirs
     , machineConfigModule ? defaultMachineConfigModule
@@ -107,9 +217,7 @@ rec {
     , name ? "vm-test"
     }:
     let
-      hostPkgs = pkgs;
-
-      mountSharesScript = pkgs.writeScriptBin "mount-shares" {} ''
+      mountSharesScript = hostPkgs.writeScriptBin "mount-shares" {} ''
       '';
 
       # TODO: hacky hacky… We need to mount the 9p shares at some
@@ -152,6 +260,47 @@ rec {
       runVmScript = interactive: node:
       let
         qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
+
+        # On darwin we accelerate with Apple's Hypervisor.framework (HVF); on Linux
+        # with KVM. We only ever pair a host with a same-architecture Linux guest
+        # (e.g. aarch64-darwin → aarch64-linux), so hardware acceleration applies
+        # whenever the host has it. On a Linux host without /dev/kvm (e.g. GitHub's
+        # hosted arm64 runners) QEMU falls back to TCG emulation: slow, but it runs,
+        # as nixpkgs' own `accel=kvm:tcg` does.
+        accel = if hostIsDarwin then "hvf" else "kvm:tcg";
+
+        qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
+
+        machineFlags =
+          if guestIsAarch64 then
+            [ "-machine virt,accel=${accel}" ]
+          else
+            [ "-machine accel=${accel}" ];
+
+        firmwareFlags = lib.optionals guestIsAarch64 [
+          "-drive if=pflash,format=raw,unit=0,readonly=on,file=${qemupkg}/share/qemu/edk2-aarch64-code.fd"
+          "-drive if=pflash,format=raw,unit=1,file=\"$TMPDIR/efivars.fd\""
+        ];
+
+        diskFlags =
+          if guestIsAarch64 then
+            [ "-drive if=none,file=${image},format=qcow2,id=disk0"
+              "-device virtio-blk-pci,drive=disk0"
+            ]
+          else
+            [ "-drive file=${image},format=qcow2" ];
+
+        # On aarch64 UEFI, disable the NIC's option ROM via romfile=. Without this,
+        # every boot prints "Image type X64 can't be loaded on AARCH64 UEFI system."
+        # while EDK2 tries (and fails) to load the ROM's x86 EFI section — harmless
+        # (the disk still boots normally) but noisy on every single boot. We never
+        # PXE-boot, so dropping the ROM outright is safe and removes the warning.
+        netDevFlag =
+          if guestIsAarch64 then
+            "-device virtio-net-pci,netdev=net0,romfile="
+          else
+            "-device virtio-net-pci,netdev=net0";
+
         # The test driver extracts the name of the node from the name of the
         # VM script, so it's important here to stick to the naming scheme expected
         # by the test driver.
@@ -185,20 +334,25 @@ rec {
           mkdir -p "$TMPDIR/xchg"
 
           cd "$TMPDIR"
+          ${lib.optionalString guestIsAarch64 ''
+            # Writable UEFI variable store for the aarch64 firmware above: a blank
+            # file of the same size as the firmware code image (64 MiB), which the
+            # firmware initializes on first use. It is created anew on every start
+            # (in a fresh $TMPDIR), so nothing persists from one run to the next.
+            truncate -s 64M "$TMPDIR/efivars.fd"
+          ''}
 
           # Start QEMU.
-          # We might need to be smarter about the QEMU binary to run when we want to
-          # support architectures other than x86_64.
-          # See qemu-common.nix in nixpkgs.
-          ${lib.concatStringsSep "\\\n  " [
-            "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
+          ${lib.concatStringsSep "\\\n  " ([
+            "exec ${qemuBinary}"
+          ] ++ machineFlags ++ [
             "-device virtio-rng-pci"
             "-cpu max"
             "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
-            "-drive file=${image},format=qcow2"
-            "-device virtio-net-pci,netdev=net0"
+          ] ++ firmwareFlags ++ diskFlags ++ [
+            netDevFlag
             "-netdev user,id=net0"
             "-virtfs local,security_model=passthrough,id=fsdev1,path=/nix/store,readonly=on,mount_tag=nix-store"
             (lib.concatStringsSep "\\\n  "
@@ -209,10 +363,27 @@ rec {
             (lib.optionalString (!interactive) "-nographic")
             "$QEMU_OPTS"
             "$@"
-          ]};
+          ])};
         '';
 
-      test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
+      test-driver =
+        (hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver"
+          # `vhost-device-vsock` is a Linux-only dependency of the test driver (used
+          # for the vsock SSH backdoor). We never enable that backdoor
+          # (`enable_ssh_backdoor = false`), so on darwin we swap it for a harmless
+          # stand-in to keep the driver evaluatable. On Linux the real dep is used.
+          (lib.optionalAttrs hostIsDarwin {
+            vhost-device-vsock = hostPkgs.emptyDirectory;
+          })
+        ).overrideAttrs (old: {
+          # `vlan.py`'s `_log_stream` forwards the vde_switch / vde_plug2tap pipes to
+          # `logger.debug()` but decodes them as STRICT UTF-8.
+          postPatch = (old.postPatch or "") + ''
+            vlan=$(find . -path '*test_driver/vlan.py' | head -n1)
+            substituteInPlace "$vlan" \
+              --replace-fail ${lib.escapeShellArg "text=True,"} ${lib.escapeShellArg "text=True,\n            errors=\"replace\","}
+          '';
+        });
 
       # create configuration file based on test driver configuration
       # see https://github.com/NixOS/nixpkgs/blob/6ab8a6fd46fa56298ad16ec9b36cf6ab04413459/nixos/lib/test-driver/src/test_driver/driver.py#L38
@@ -246,7 +417,10 @@ rec {
         in
         {
           sandboxed = hostPkgs.stdenv.mkDerivation {
-            requiredSystemFeatures = [ "kvm" "nixos-test" ];
+            # KVM on Linux, Apple's Hypervisor.framework on darwin.
+            requiredSystemFeatures = [ "nixos-test" ]
+              ++ lib.optional hostIsDarwin "apple-virt"
+              ++ lib.optional (!hostIsDarwin) "kvm";
             buildCommand = ''
               ${defaultTest {}}
               touch $out

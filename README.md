@@ -33,7 +33,8 @@ And run your tests using a single CLI command.
 
 This project builds on the [NixOS VM test](https://nixos.org/manual/nixos/stable/#sec-nixos-tests) infrastructure to allow you to test your software instantly on Ubuntu, Debian, Fedora, Rocky, and Arch Linux virtual machines.
 
-It runs on any Linux machine with Nix installed.
+It runs on any Linux machine with Nix installed, and on Apple Silicon (aarch64)
+macOS with a Linux builder configured (see [Prerequisites](#prerequisites)).
 
 Your tests can either be used:
 
@@ -46,11 +47,22 @@ You configure **nix-vm-test** using Nix package manager, either in a flake or in
 
 ## Prerequisites
 
-- A Linux machine
-
 - Nix Package Manager
 
-- Hardware KVM acceleration. The project will run without it, but it will be too slow for practical purposes.
+- Either:
+  - **Linux**: any `x86_64-linux` or `aarch64-linux` machine, with hardware **KVM**
+    acceleration (`/dev/kvm`). The project will run without it, but it will be too
+    slow for practical purposes.
+  - **macOS**: Apple Silicon (`aarch64-darwin`), with a **Linux builder** — nix-darwin's
+    [`linux-builder`](https://nix-darwin.github.io/nix-darwin/manual/index.html#opt-nix.linux-builder.enable)
+    or a remote `aarch64-linux` build machine. This is **required**: the guest
+    image is customized in a Linux derivation that is not available from any binary
+    cache and therefore must be built. VMs run as `aarch64-linux` guests.
+
+The guest image is customized offline inside a short-lived VM (nixpkgs'
+`vmTools.runInLinuxVM`), the same way on every host, so the machine that builds it
+needs the `kvm` Nix system feature. On Linux that is the default when `/dev/kvm` is
+available; without it the build falls back to (slow) emulation or is refused.
 
 -----
 
