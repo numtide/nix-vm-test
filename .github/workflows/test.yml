@@ -1,0 +1,116 @@
+name: Test
+
+# Boots every distribution image under QEMU and runs the VM tests, on x86_64 and
+# aarch64 Linux. Each check is its own job, discovered from the flake, so a failing
+# distribution is identifiable at a glance.
+#
+# - x86_64: GitHub's hosted runners have /dev/kvm, so the guests are accelerated.
+# - aarch64: the hosted arm runners have no /dev/kvm, so the guests run under QEMU's
+#   TCG emulation (nix-vm-test falls back to it): slower, but the same test.
+# - aarch64-darwin cannot run here (the hosted macOS runners have no
+#   Hypervisor.framework and no Linux builder); it is only evaluated.
+
+on:
+  push:
+    branches-ignore:
+      - update-images*
+      - renovate/**
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: discover checks
+    runs-on: ubuntu-latest
+    outputs:
+      amd64: ${{ steps.list.outputs.amd64 }}
+      arm64: ${{ steps.list.outputs.arm64 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - id: list
+        run: |
+          # The checks also contain the bare image fetches (named <distro>-<version>);
+          # those are built as dependencies of the tests, so list only the tests.
+          # Ubuntu 20.04 hangs at boot under TCG (its 5.4 kernel; it boots fine with
+          # KVM or HVF), so it is only tested where the guests are accelerated.
+          tests='builtins.match "(ubuntu|debian|fedora|rocky|archlinux)-[0-9_]+" n == null'
+          amd64=$(nix eval --raw .#checks.x86_64-linux --apply "cs: builtins.toJSON (builtins.filter (n: $tests) (builtins.attrNames cs))")
+          arm64=$(nix eval --raw .#checks.aarch64-linux --apply "cs: builtins.toJSON (builtins.filter (n: $tests && builtins.match \"ubuntu-20_04.*\" n == null) (builtins.attrNames cs))")
+          { echo "amd64=$amd64"; echo "arm64=$arm64"; } >> "$GITHUB_OUTPUT"
+          echo "amd64: $amd64"; echo "arm64: $arm64"
+      # aarch64-darwin cannot be built here, but it must keep evaluating.
+      - name: Evaluate the aarch64-darwin checks
+        run: |
+          nix eval .#checks.aarch64-darwin --apply 'cs: builtins.length (builtins.attrNames cs)'
+
+  check-amd64:
+    needs: discover
+    name: ${{ matrix.check }} (x86_64-linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        check: ${{ fromJSON(needs.discover.outputs.amd64) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # A VM test builds a customized copy of a multi-GB image, which overflows the
+      # runner's ~21GB `/`: give Nix a large store carved out of `/mnt` before it is
+      # installed.
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
+        with:
+          hatchet-protocol: holster
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: build-dir = /nix/build
+      - run: nix build -L ".#checks.x86_64-linux.${{ matrix.check }}"
+
+  check-arm64:
+    needs: discover
+    name: ${{ matrix.check }} (aarch64-linux)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        check: ${{ fromJSON(needs.discover.outputs.arm64) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
+        with:
+          hatchet-protocol: holster
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          # These runners have no /dev/kvm, which Nix would need to see to advertise the
+          # `kvm` system feature the VM derivations require: declare it (the guests then
+          # run under TCG).
+          extra_nix_config: |
+            build-dir = /nix/build
+            extra-system-features = kvm
+      - run: nix build -L ".#checks.aarch64-linux.${{ matrix.check }}"
+
+  # A single stable status to require in branch protection: the real checks are a
+  # dynamic matrix whose job names change with the images.
+  ci-passed:
+    name: ci passed
+    if: always()
+    needs: [discover, check-amd64, check-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every check to have succeeded
+        run: |
+          r='${{ needs.discover.result }}/${{ needs.check-amd64.result }}/${{ needs.check-arm64.result }}'
+          echo "discover/check-amd64/check-arm64 = $r"
+          [ "$r" = "success/success/success" ] || { echo "a required job did not succeed"; exit 1; }
