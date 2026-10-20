@@ -30,6 +30,12 @@ let
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
+      # RHEL (and RHEL clones by nature) compile their kernels with
+      # support for 9P filesystem disabled, so the VM cannot mount the
+      # store of the host. Instead, the closure of extraPathsToRegister
+      # is copied into the image and registered there, together with
+      # Nix itself, whose nix-store does the registration.
+      closure = pkgs.closureInfo { rootPaths = extraPathsToRegister ++ [ pkgs.nix ]; };
     in
     pkgs.runCommand "${originalImage.name}-nix-vm-test.qcow2" { } ''
       # We will modify the VM image, so we need a mutable copy
@@ -37,12 +43,21 @@ let
 
       # Copy the service files here, since otherwise they end up in the VM
       # with their paths including the nix hash
-      # Also disable mounting store because RHEL (and RHEL clones by nature)
-      # compile their kernels with support for 9P filesystem disabled :(
       cp ${generic.backdoor { scriptPath = "/usr/bin/backdoorScript"; withMountedStore = false; }} backdoor.service
-      cp ${generic.mountStore { pathsToRegister = extraPathsToRegister; }} mount-store.service
       cp ${resizeService} resizeguest.service
       cp ${generic.backdoorScript} backdoorScript
+
+      # virt-customize copies each store path in with its appliance, so
+      # the image needs no tool of its own for it.
+      ${lib.optionalString (extraPathsToRegister != [ ]) ''
+        cp ${closure}/registration nix-registration
+        {
+          echo "mkdir /nix/store"
+          sed 's|.*|copy-in &:/nix/store|' ${closure}/store-paths
+          echo "copy-in nix-registration:/tmp"
+          echo "run-command ${pkgs.nix}/bin/nix-store --load-db < /tmp/nix-registration && rm /tmp/nix-registration"
+        } > nix-store-commands
+      ''}
 
       # Patching the patched shebang to a reasonable path: /bin/bash.
       # Mic92 approves this.
@@ -60,12 +75,14 @@ let
         "${pkgs.guestfs-tools}/bin/virt-customize"
         "-a ${resultImg}"
         "--smp 2"
-        "--memsize 256"
+        # The SELinux relabel at the end walks the store paths copied in
+        # too, which needs more memory than the image alone.
+        "--memsize ${if extraPathsToRegister != [ ] then "1024" else "256"}"
         "--no-network"
         "--copy-in backdoorScript:/usr/bin"
         "--copy-in backdoor.service:/etc/systemd/system"
-        "--copy-in mount-store.service:/etc/systemd/system"
         "--copy-in resizeguest.service:/etc/systemd/system"
+        (lib.optionalString (extraPathsToRegister != [ ]) "--commands-from-file nix-store-commands")
         "--run"
         (pkgs.writeShellScript "run-script" ''
           # Clear the root password
@@ -93,7 +110,6 @@ let
           ${lib.optionalString (diskSize != null) ''
             systemctl enable resizeguest.service
           ''}
-          systemctl enable register-nix-paths.service
           systemctl enable backdoor.service
 
           # lock repositories to the minor version in vault so that
