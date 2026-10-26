@@ -1,4 +1,4 @@
-{ pkgs, package, system }:
+{ pkgs, package, guestPkgs, system }:
 let
   lib = package;
   multiUserTest = runner: (runner {

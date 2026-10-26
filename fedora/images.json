@@ -20,5 +20,11 @@
       "name": "43/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
       "hash": "sha256-hGV0yKl80tjcHyMQYtcxB8yFy7vaVjNeJkpG46bIqy8="
     }
+  },
+  "aarch64-linux": {
+    "43": {
+      "name": "43/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-43-1.6.aarch64.qcow2",
+      "hash": "sha256-ZgMa6p7GHm0NW7oSuUVOgMqU6KeckT033tTGAxFwW4s="
+    }
   }
 }

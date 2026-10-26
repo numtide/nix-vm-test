@@ -1,4 +1,4 @@
-{ pkgs, package, system }:
+{ pkgs, package, guestPkgs, system }:
 
 let
   lib = package;
@@ -58,13 +58,16 @@ in {
   }).sandboxed;
 
   pathsToRegisterTest = let
-    testPackage = pkgs.runCommandNoCC "test-package" {} ''
+    # This package is shared into the guest and its path is executed/registered
+    # there, so it must be a Linux (guest) store path — build it with guestPkgs.
+    testPackage = guestPkgs.runCommandNoCC "test-package" {} ''
       mkdir -p $out/bin
       echo '#!/bin/sh' > $out/bin/test-tool
       echo 'echo "Hello from test-package"' >> $out/bin/test-tool
       chmod +x $out/bin/test-tool
     '';
-    nixStoreBin = "${pkgs.lib.getBin pkgs.nix}/bin/nix-store";
+    # `nix-store` here runs inside the guest, so it also has to be the Linux build.
+    nixStoreBin = "${pkgs.lib.getBin guestPkgs.nix}/bin/nix-store";
   in (lib.ubuntu."23_04" {
     sharedDirs = {};
     testScript = ''

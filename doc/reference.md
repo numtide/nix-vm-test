@@ -103,7 +103,24 @@ $ROOT.$DISTRIBUTION {
 }
 ```
 
-Where `$ROOT` will be `nix-vm-test.lib.x86_64-linux` on a flake-based setup.
+Where `$ROOT` will be `nix-vm-test.lib.<system>` on a flake-based setup.
+
+### Platform support
+
+`<system>` is the **host** system running the driver. Supported hosts:
+
+| Host system      | Guest system    | Acceleration | Notes                                  |
+| ---------------- | --------------- | ------------ | -------------------------------------- |
+| `x86_64-linux`   | `x86_64-linux`  | KVM          |                                        |
+| `aarch64-linux`  | `aarch64-linux` | KVM          |                                        |
+| `aarch64-darwin` | `aarch64-linux` | HVF          | Requires a Linux builder (see README). |
+
+On macOS the VMs run as `aarch64-linux` guests, so only distributions that publish
+an `aarch64` image are available there. **Arch Linux is x86_64-only and is therefore
+not exposed on `aarch64-darwin`**, and Fedora is only available as release 43 there
+(older aarch64 releases are no longer on the release mirror). The Rocky 8.x and 9.0
+aarch64 images are skipped (8.x needs 64 KB pages, which Apple Silicon lacks; the 9.0
+image is damaged).
 
 Where `$DISTRIBUTION` is a `$NAME.$VERSION` couple. Here's the currently supported name/version couples:
 
@@ -149,6 +166,7 @@ Where:
 | sharedDirs     | This attribute set describes the host directories that will be mounted to the guest filesystem. `source` being the host directory, `target` being the path we want to mount the directory on the VM.                                                                                | See above example |
 | memorySize     | Memory available to the guest VM, in MiB. Defaults to 1024.                                                                                                                                                                                                                          | 2048              |
 | cpus           | Number of virtual CPUs available to the guest VM. Defaults to 2.                                                                                                                                                                                                                     | 4                 |
+| selinuxEnforcing | Fedora and Rocky only. Boot with SELinux in enforcing mode instead of permissive. Defaults to `true` on Rocky and `false` on Fedora. | `false` |
 | testScript     | A Python script used to orchestrate the integration test. This is compatible with NixOS tests. You can have a look at the [relevant NixOS manual section](https://nixos.org/manual/nixos/stable/#ssec-machine-objects) to get the reference documentation of the available methods. | See above example |
 
 #### Outputs
