@@ -11,6 +11,7 @@ let
     fedora = ./fedora.nix;
     rocky = ./rocky.nix;
     archlinux = ./archlinux.nix;
+    yocto = ./yocto.nix;
   };
 
   # Only build a distro's tests when it actually has images for this system.

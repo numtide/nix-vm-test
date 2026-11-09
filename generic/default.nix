@@ -26,6 +26,15 @@ rec {
   # Careful since we do not have the nix store yet when this service runs,
   # so we cannot use guestPkgs.writeText or guestPkgs.writeShellScript for instance,
   # since their results would refer to the store
+  mountStoreCommands = root: [
+    "mkdir -p ${root}/nix/.ro-store"
+    "mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store ${root}/nix/.ro-store"
+    "mkdir -p -m 0755 ${root}/nix/.rw-store ${root}/nix/store"
+    "mount -t tmpfs -o size=2G tmpfs ${root}/nix/.rw-store"
+    "mkdir -p -m 0755 ${root}/nix/.rw-store/store ${root}/nix/.rw-store/work"
+    "mount -t overlay overlay ${root}/nix/store -o lowerdir=${root}/nix/.ro-store,upperdir=${root}/nix/.rw-store/store,workdir=${root}/nix/.rw-store/work"
+  ];
+
   mountStore = { pathsToRegister ? [ ] }:
     let
       pathRegistrationInfo = "${guestPkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
@@ -34,19 +43,26 @@ rec {
       [Service]
       Type = oneshot
       User = root
-      ExecStart = /bin/sh -euc ' \
-        mkdir -p /nix/.ro-store; \
-        mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store; \
-        mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
-        mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
-        mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
-        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin guestPkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
+      ExecStart = /bin/sh -euc '${lib.concatStringsSep "; " (
+        [ "grep -q \"^overlay /nix/store overlay \" /proc/mounts || { ${lib.concatStringsSep "; " (mountStoreCommands "")}; }" ]
+        ++ lib.optional (pathsToRegister != []) "${lib.getBin guestPkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"
+      )}'
       [Install]
       WantedBy = multi-user.target
     '';
 
-  backdoorScript = guestPkgs.writeShellScript "backdoor-start-script" ''
+  defaultGuestPackages = [ guestPkgs.netcat-openbsd ];
+  guestEnv = paths: guestPkgs.buildEnv {
+    name = "vm-test-guest-packages";
+    inherit paths;
+    pathsToLink = [ "/bin" ];
+  };
+  guestPath = paths: lib.optionalString (paths != [ ]) "${guestEnv paths}/bin";
+
+  backdoorScript = backdoorScriptFor { };
+  backdoorScriptFor = { extraPath ? "" }: guestPkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
+    ${lib.optionalString (extraPath != "") ''export PATH=${extraPath}:$PATH''}
 
     ProtectSystem=false
     export USER=root
@@ -86,7 +102,7 @@ rec {
   #               script needs to be copied to the VM and the path of
   #               the backdoor script changes, allow the "builder"
   #               to specify it
-  backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
+  backdoor = { withMountedStore ? true, extraPath ? "", scriptPath ? backdoorScriptFor { inherit extraPath; } }:
     guestPkgs.writeText "backdoor.service" ''
       [Unit]
       Requires = dev-hvc0.device dev-${serialConsole}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
@@ -221,6 +237,7 @@ rec {
     , memorySize ? null
     , cpus ? null
     , name ? "vm-test"
+    , extraQemuArgs ? [ ]
     }:
     let
       mountSharesScript = hostPkgs.writeScriptBin "mount-shares" {} ''
@@ -354,6 +371,7 @@ rec {
                   node.virtualisation.sharedDirectories))
             "-snapshot"
             (lib.optionalString (!interactive) "-nographic")
+          ] ++ extraQemuArgs ++ [
             "$QEMU_OPTS"
             "$@"
           ])};
