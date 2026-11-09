@@ -9,6 +9,16 @@ rec {
   # Careful since we do not have the nix store yet when this service runs,
   # so we cannot use pkgs.writeText or pkgs.writeShellScript for instance,
   # since their results would refer to the store
+  # The store mount, as shell lines, for an initrd or a unit. `root` prefixes every path.
+  mountStoreCommands = root: [
+    "mkdir -p ${root}/nix/.ro-store"
+    "mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store ${root}/nix/.ro-store"
+    "mkdir -p -m 0755 ${root}/nix/.rw-store/ ${root}/nix/store"
+    "mount -t tmpfs -o size=2G tmpfs ${root}/nix/.rw-store"
+    "mkdir -p -m 0755 ${root}/nix/.rw-store/store ${root}/nix/.rw-store/work"
+    "mount -t overlay overlay ${root}/nix/store -o lowerdir=${root}/nix/.ro-store,upperdir=${root}/nix/.rw-store/store,workdir=${root}/nix/.rw-store/work"
+  ];
+
   mountStore = { pathsToRegister ? [ ] }:
     let
       pathRegistrationInfo = "${pkgs.closureInfo { rootPaths = pathsToRegister; }}/registration";
@@ -17,18 +27,16 @@ rec {
       [Service]
       Type = oneshot
       User = root
-      ExecStart = /bin/sh -euc ' \
-        mkdir -p /nix/.ro-store; \
-        mount -t 9p -o defaults,trans=virtio,version=9p2000.L,cache=loose,msize=${toString (256 * 1024 * 1024)} nix-store /nix/.ro-store; \
-        mkdir -p -m 0755 /nix/.rw-store/ /nix/store; \
-        mount -t tmpfs -o size=2G tmpfs /nix/.rw-store; \
-        mkdir -p -m 0755 /nix/.rw-store/store /nix/.rw-store/work; \
-        mount -t overlay overlay /nix/store -o lowerdir=/nix/.ro-store,upperdir=/nix/.rw-store/store,workdir=/nix/.rw-store/work${lib.optionalString (pathsToRegister != []) "; ${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"}'
+      ExecStart = /bin/sh -euc '${lib.concatStringsSep "; " (
+        [ "grep -q \"^overlay /nix/store overlay \" /proc/mounts || { ${lib.concatStringsSep "; " (mountStoreCommands "")}; }" ]
+        ++ lib.optional (pathsToRegister != []) "${lib.getBin pkgs.nix}/bin/nix-store --load-db < ${pathRegistrationInfo}"
+      )}'
       [Install]
       WantedBy = multi-user.target
     '';
 
-  backdoorScript = pkgs.writeShellScript "backdoor-start-script" ''
+  backdoorScript = backdoorScriptFor { };
+  backdoorScriptFor = { serialDevice ? "ttyS0" }: pkgs.writeShellScript "backdoor-start-script" ''
     set -euo pipefail
 
     ProtectSystem=false
@@ -48,7 +56,7 @@ rec {
 
     cd /tmp
     exec < /dev/hvc0 > /dev/hvc0
-    while ! exec 2> /dev/ttyS0; do sleep 0.1; done
+    while ! exec 2> /dev/${serialDevice}; do sleep 0.1; done
     echo "connecting to host..." >&2
     stty -F /dev/hvc0 raw -echo # prevent nl -> cr/nl conversion
     # This line is essential since it signals to the test driver that the
@@ -69,11 +77,11 @@ rec {
   #               script needs to be copied to the VM and the path of
   #               the backdoor script changes, allow the "builder"
   #               to specify it
-  backdoor = { withMountedStore ? true, scriptPath ? backdoorScript }:
+  backdoor = { withMountedStore ? true, serialDevice ? "ttyS0", scriptPath ? backdoorScriptFor { inherit serialDevice; } }:
     pkgs.writeText "backdoor.service" ''
       [Unit]
-      Requires = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
-      After = dev-hvc0.device dev-ttyS0.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      Requires = dev-hvc0.device dev-${serialDevice}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
+      After = dev-hvc0.device dev-${serialDevice}.device ${lib.strings.optionalString withMountedStore "mount-store.service"}
       # Keep this unit active when we switch to rescue mode for instance
       IgnoreOnIsolate = true
 
@@ -105,6 +113,7 @@ rec {
     , memorySize ? null
     , cpus ? null
     , name ? "vm-test"
+    , bootArgs ? [ ]
     }:
     let
       hostPkgs = pkgs;
@@ -187,17 +196,17 @@ rec {
           cd "$TMPDIR"
 
           # Start QEMU.
-          # We might need to be smarter about the QEMU binary to run when we want to
-          # support architectures other than x86_64.
-          # See qemu-common.nix in nixpkgs.
-          ${lib.concatStringsSep "\\\n  " [
+          ${lib.concatStringsSep "\\\n  " ([
             "exec ${lib.getBin qemupkg}/bin/qemu-kvm"
+          ] ++ lib.optionals (lib.hasPrefix "aarch64" system) [
+            "-machine virt"
+          ] ++ [
             "-device virtio-rng-pci"
             "-cpu max"
             "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
-            "-drive file=${image},format=qcow2"
+            "-drive file=${image},format=qcow2${lib.optionalString (lib.hasPrefix "aarch64" system) ",if=virtio"}"
             "-device virtio-net-pci,netdev=net0"
             "-netdev user,id=net0"
             "-virtfs local,security_model=passthrough,id=fsdev1,path=/nix/store,readonly=on,mount_tag=nix-store"
@@ -207,9 +216,10 @@ rec {
                   node.virtualisation.sharedDirectories))
             "-snapshot"
             (lib.optionalString (!interactive) "-nographic")
+          ] ++ bootArgs ++ [
             "$QEMU_OPTS"
             "$@"
-          ]};
+          ])};
         '';
 
       test-driver = hostPkgs.python3Packages.callPackage "${nixpkgs}/nixos/lib/test-driver" { };
