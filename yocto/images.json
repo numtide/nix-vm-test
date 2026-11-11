@@ -1,0 +1,22 @@
+{
+  "aarch64-linux": {
+    "6_0": {
+      "hash": "05anyn1wcj1fg1jv4vc8cczzn2wfig8ldjk8pd52cm66yjfbpbfn",
+      "url": "https://downloads.yoctoproject.org/releases/yocto/yocto-6.0.4/machines/qemu/qemuarm64-alt/core-image-full-cmdline-qemuarm64.rootfs-20260930102917.ext4.zst"
+    },
+    "6_1": {
+      "hash": "0mjlc6dcbqd2vpyikijkycv9jgmcgp8z0yccckr461zl14kyyj55",
+      "url": "https://downloads.yoctoproject.org/releases/yocto/yocto-6.1/machines/qemu/qemuarm64-alt/core-image-full-cmdline-qemuarm64.rootfs-20260929193744.ext4.zst"
+    }
+  },
+  "x86_64-linux": {
+    "6_0": {
+      "hash": "1inv0jgn1hqcyvw0d8pp5z672l26n133rq512z5vsbf5hd29ahcs",
+      "url": "https://downloads.yoctoproject.org/releases/yocto/yocto-6.0.4/machines/qemu/qemux86-64-alt/core-image-full-cmdline-qemux86-64.rootfs-20260930102843.ext4.zst"
+    },
+    "6_1": {
+      "hash": "1zj5xcygmpi1bzr76gxbbdss3vdapifjbj91hcq6vk3407v38w14",
+      "url": "https://downloads.yoctoproject.org/releases/yocto/yocto-6.1/machines/qemu/qemux86-64-alt/core-image-full-cmdline-qemux86-64.rootfs-20260929193745.ext4.zst"
+    }
+  }
+}

@@ -10,11 +10,12 @@ let
   fedora = pkgs.callPackage ./fedora { inherit generic system; };
   rocky = pkgs.callPackage ./rocky { inherit generic system; };
   archlinux = pkgs.callPackage ./archlinux { inherit generic system; };
+  yocto = pkgs.callPackage ./yocto { inherit generic system; };
   # Function that can be used when defining inline modules to get better location
   # reporting in module-system errors.
   # Usage example:
   #   { _file = "${printAttrPos (builtins.unsafeGetAttrPos "a" { a = null; })}: inline module"; }
   nixos = "${nixpkgs}/nixos";
 in {
-  inherit ubuntu debian fedora rocky archlinux;
+  inherit ubuntu debian fedora rocky archlinux yocto;
 }

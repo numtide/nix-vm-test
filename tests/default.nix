@@ -7,4 +7,5 @@ let
   fedora = addPrefixToTests "fedora-" (import ./fedora.nix { inherit package pkgs system; });
   rocky = addPrefixToTests "rocky-" (import ./rocky.nix { inherit package pkgs system; });
   archlinux = addPrefixToTests "archlinux-" (import ./archlinux.nix { inherit package pkgs system; });
-in ubuntu // debian // fedora // rocky // archlinux
+  yocto = addPrefixToTests "yocto-" (import ./yocto.nix { inherit package pkgs system; });
+in ubuntu // debian // fedora // rocky // archlinux // yocto
