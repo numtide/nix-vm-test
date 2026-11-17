@@ -237,6 +237,12 @@ nix-vm-test.lib.x86_64-linux.yocto.fromRootfs {
 }
 ```
 
+`extraRootModules` adds kernel modules to the stage-1 initrd, for an image whose own fstab names
+a device the default set does not reach. An image that mounts partitions off a second disk
+attached with `-device nvme` needs `extraRootModules = [ "nvme" ];`, or systemd waits out the
+device unit's timeout and drops to emergency mode. The disk itself is not nix-vm-test's to
+provide: pass it through `QEMU_OPTS` on the test derivation.
+
 To use the image's own kernel and bootloader, pass a bootable disk instead:
 
 ```nix

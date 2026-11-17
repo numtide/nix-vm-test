@@ -5,23 +5,27 @@ let
   isAarch64 = lib.hasPrefix "aarch64" system;
   rootDevice = if isAarch64 then "/dev/vda" else "/dev/sda";
   inherit (generic) serialConsole;
-  vmTools = pkgs.vmTools.override {
-    rootModules = [
-      "ext4"
-      "virtio_pci"
-      "virtio_console"
-      "virtio_net"
-      "virtio_rng"
-      "af_packet"
-      "inet_diag"
-      "netlink_diag"
-      "9pnet_virtio"
-      "9p"
-      "overlay"
-    ]
-    ++ (if isAarch64 then [ "virtio_blk" ] else [ "i8042" "atkbd" "ata_piix" "sd_mod" ]);
-  };
-  stage1Init = { mountStore }: pkgs.writeScript "yocto-stage1" ''
+  mkVmTools =
+    extraRootModules:
+    pkgs.vmTools.override {
+      rootModules = [
+        "ext4"
+        "virtio_pci"
+        "virtio_console"
+        "virtio_net"
+        "virtio_rng"
+        "af_packet"
+        "inet_diag"
+        "netlink_diag"
+        "9pnet_virtio"
+        "9p"
+        "overlay"
+      ]
+      ++ (if isAarch64 then [ "virtio_blk" ] else [ "i8042" "atkbd" "ata_piix" "sd_mod" ])
+      ++ extraRootModules;
+    };
+  vmTools = mkVmTools [ ];
+  stage1Init = { mountStore, vmTools }: pkgs.writeScript "yocto-stage1" ''
     #! ${vmTools.initrdUtils}/bin/ash -e
     export PATH=${vmTools.initrdUtils}/bin
     mount -t proc none /proc
@@ -42,21 +46,30 @@ let
     exec switch_root /fs /sbin/init
   '';
 
-  initrd = { mountStore ? true }: pkgs.makeInitrd {
+  initrd = { mountStore ? true, vmTools }: pkgs.makeInitrd {
     contents = [
       {
-        object = stage1Init { inherit mountStore; };
+        object = stage1Init { inherit mountStore vmTools; };
         symlink = "/init";
       }
     ];
   };
 
   # The nixpkgs kernel and the stage-1 initrd; `root` is the rootfs device, the whole disk by default.
-  kernelQemuArgs = { mountStore ? true, root ? rootDevice }: [
-    "-kernel ${pkgs.linux}/${if isAarch64 then "Image" else "bzImage"}"
-    "-initrd ${initrd { inherit mountStore; }}/initrd"
-    "-append 'root=${root} console=${serialConsole}'"
-  ];
+  kernelQemuArgs =
+    {
+      mountStore ? true,
+      root ? rootDevice,
+      extraRootModules ? [ ],
+    }:
+    [
+      "-kernel ${pkgs.linux}/${if isAarch64 then "Image" else "bzImage"}"
+      "-initrd ${initrd {
+        inherit mountStore;
+        vmTools = mkVmTools extraRootModules;
+      }}/initrd"
+      "-append 'root=${root} console=${serialConsole}'"
+    ];
 
   units = extraPathsToRegister: {
     "backdoor.service" = generic.backdoor { };
@@ -156,14 +169,14 @@ let
       cp ${resultImg} $out
     '';
 
-  testArgs = { testScript, sharedDirs ? {}, extraPathsToRegister ? [ ], memorySize ? null, cpus ? null }: {
+  testArgs = { testScript, sharedDirs ? {}, extraPathsToRegister ? [ ], extraRootModules ? [ ], memorySize ? null, cpus ? null }: {
     inherit testScript sharedDirs memorySize cpus;
   };
 
-  makeVmTestFromRootfs = name: rootfs: { extraPathsToRegister ? [ ], ... }@args: generic.makeVmTest (testArgs args // {
+  makeVmTestFromRootfs = name: rootfs: { extraPathsToRegister ? [ ], extraRootModules ? [ ], ... }@args: generic.makeVmTest (testArgs args // {
     inherit name;
     image = makeDiskImage name rootfs extraPathsToRegister;
-    extraQemuArgs = kernelQemuArgs { };
+    extraQemuArgs = kernelQemuArgs { inherit extraRootModules; };
   });
 
   custom = { image, extraQemuArgs ? [ ], extraPathsToRegister ? [ ], ... }@args:
