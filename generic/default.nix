@@ -117,7 +117,8 @@ rec {
     '';
 
   # Customize a disk image without libguestfs: boot a tiny Linux VM (nixpkgs'
-  # `vmTools.runInLinuxVM`) with the image attached as a raw virtio disk, mount its
+  # `vmTools.runInLinuxVM`) with the image attached as a virtio disk (a qcow2 overlay
+  # on the original image), mount its
   # root filesystem and run `script` against it. Unlike `virt-customize` (whose
   # appliance only exists for x86), this runs on whatever architecture the builder
   # can run natively, so the same preparation works for x86_64 and aarch64 guests.
@@ -165,13 +166,13 @@ rec {
           guestPkgs.systemd # `systemctl --root` to enable/mask units offline
         ] ++ nativeBuildInputs;
         preVM = ''
-          diskImage=$PWD/disk.raw
-          qemu-img convert -f qcow2 -O raw ${originalImage} "$diskImage"
-          ${lib.optionalString (diskSize != null) ''qemu-img resize -f raw "$diskImage" ${diskSize}''}
+          diskImage=$PWD/disk.qcow2
+          qemu-img create -f qcow2 -b ${originalImage} -F qcow2 "$diskImage"
+          ${lib.optionalString (diskSize != null) ''qemu-img resize "$diskImage" ${diskSize}''}
         '';
         postVM = ''
           rm -rf "$out"
-          qemu-img convert -f raw -O qcow2 "$diskImage" "$out"
+          qemu-img convert -O qcow2 "$diskImage" "$out"
         '';
       }
       ''
