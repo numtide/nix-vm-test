@@ -167,7 +167,7 @@ let
         "--mkdir /nix/var"
         "--mkdir /etc/systemd/system/multi-user.target.wants"
       ]
-      ++ lib.concatMap (unit: [ "--copy-in ${unit}:/etc/systemd/system" (enable unit) ]) (lib.attrNames (units [ ]))
+      ++ lib.concatMap (unit: [ "--copy-in ${unit}:/etc/systemd/system" (enable unit) ]) (lib.attrNames (units extraPathsToRegister guestPackages))
       ++ [
         (mask "serial-getty@${serialConsole}.service")
         (mask "serial-getty@hvc0.service")

@@ -85,7 +85,7 @@ runTestOnEveryImage multiUserTest
 // pkgs.lib.optionalAttrs (system == "x86_64-linux") {
   custom-test = (lib.yocto.custom (args // {
     image = bootableDisk;
-    kernelArgs = lib.yocto.kernelQemuArgs { mountStore = false; root = "/dev/sda2"; };
+    extraQemuArgs = lib.yocto.kernelQemuArgs { mountStore = false; root = "/dev/sda2"; };
     testScript = testScript + ''
       vm.succeed("journalctl -u mount-store.service | grep -F 'Finished'")
     '';
