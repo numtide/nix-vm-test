@@ -1,4 +1,4 @@
-{ pkgs, package, system }:
+{ pkgs, package, guestPkgs, system }:
 let
   lib = package;
   multiUserTest = runner: (runner {
@@ -12,12 +12,23 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.fedora.${n}))
     lib.fedora.images;
 in {
-  resizeImage = (lib.fedora."39" {
+  resizeImage = (lib.fedora."43" {
     sharedDirs = {};
     testScript = ''
       vm.wait_for_unit("multi-user.target")
     '';
     diskSize = "+2M";
+  }).sandboxed;
+
+  # The image must boot, and the backdoor must work, with SELinux enforcing.
+  selinuxEnforcing = (lib.fedora."43" {
+    sharedDirs = {};
+    selinuxEnforcing = true;
+    testScript = ''
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('test "$(getenforce)" = Enforcing')
+      vm.succeed('[ -z "$(systemctl --failed --no-legend)" ]')
+    '';
   }).sandboxed;
 
   sharedDirTest = let
@@ -29,7 +40,7 @@ in {
       mkdir -p $out
       echo "hello2" > $out/somefile2
     '';
-  in (lib.fedora."39" {
+  in (lib.fedora."43" {
     sharedDirs = {
       dir1 = {
         source = dir1;
