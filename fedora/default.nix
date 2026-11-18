@@ -10,9 +10,9 @@ let
     ];
   };
   images = lib.mapAttrs (k: v: fetchImage v) (imagesJSON.${system} or {});
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? false, memorySize ? null, cpus ? null }: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? false, memorySize ? null, cpus ? null, extraQemuArgs ? [ ] }: generic.makeVmTest {
     name = "vm-test-fedora_${imageID}";
-    inherit testScript sharedDirs memorySize cpus;
+    inherit  testScript sharedDirs memorySize cpus extraQemuArgs;
     image = prepareFedoraImage {
       inherit diskSize extraPathsToRegister selinuxEnforcing;
       hostPkgs = pkgs;

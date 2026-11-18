@@ -10,6 +10,9 @@ let
     vm.succeed("${pkgs.nix}/bin/nix-store --query --requisites ${pkgs.hello}")
     vm.succeed("[ $(nproc) = 3 ]")
     vm.succeed("[ $(awk '/MemTotal/ {print $2}' /proc/meminfo) -gt 1400000 ]")
+    vm.succeed("command -v nc")
+    vm.succeed("${pkgs.python3}/bin/python3 -m http.server 8111 >/dev/null 2>&1 &")
+    vm.wait_for_open_port(8111)
     ${if isAarch64 then ''
       vm.succeed("systemctl reboot")
       vm.connected = False
@@ -23,7 +26,7 @@ let
   args = {
     inherit testScript;
     sharedDirs = {};
-    extraPathsToRegister = [ pkgs.hello ];
+    extraPathsToRegister = [ pkgs.hello pkgs.python3 ];
     memorySize = 1536;
     cpus = 3;
   };

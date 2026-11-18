@@ -3,6 +3,7 @@ let
   imagesJSON = lib.importJSON ./images.json;
 
   isAarch64 = lib.hasPrefix "aarch64" system;
+  inherit (generic) defaultGuestPackages guestEnv guestPath;
   rootDevice = if isAarch64 then "/dev/vda" else "/dev/sda";
   inherit (generic) serialConsole;
   mkVmTools =
@@ -71,8 +72,10 @@ let
       "-append 'root=${root} console=${serialConsole}'"
     ];
 
-  units = extraPathsToRegister: {
-    "backdoor.service" = generic.backdoor { };
+  units = extraPathsToRegister: guestPackages: {
+    "backdoor.service" = generic.backdoor {
+      extraPath = guestPath guestPackages;
+    };
     "mount-store.service" = generic.mountStore { pathsToRegister = extraPathsToRegister; };
     "nix-var.service" = nixVarService;
   };
@@ -90,7 +93,7 @@ let
     WantedBy = multi-user.target
   '';
 
-  makeDiskImage = name: rootfs: extraPathsToRegister:
+  makeDiskImage = name: rootfs: extraPathsToRegister: maskedUnits: guestPackages:
     pkgs.runCommand "${name}.qcow2"
       {
         nativeBuildInputs = with pkgs; [ zstd e2fsprogs qemu ];
@@ -112,19 +115,23 @@ let
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList (unit: file: ''
         write ${file} /etc/systemd/system/${unit}
         symlink /etc/systemd/system/multi-user.target.wants/${unit} /etc/systemd/system/${unit}
-      '') (units extraPathsToRegister))}
+      '') (units extraPathsToRegister guestPackages))}
       symlink /etc/systemd/system/serial-getty@${serialConsole}.service /dev/null
       symlink /etc/systemd/system/serial-getty@hvc0.service /dev/null
+      ${lib.concatMapStringsSep "\n      " (
+        unit: "symlink /etc/systemd/system/${unit} /dev/null"
+      ) maskedUnits}
       EOF
 
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList (unit: file: ''
         debugfs -R "dump /etc/systemd/system/${unit} dumped" rootfs.ext4
         cmp -s dumped ${file} \
           || { echo "debugfs exited 0 but did not write ${unit}; is rootfs.ext4 out of space?" >&2; exit 1; }
-      '') (units extraPathsToRegister))}
+      '') (units extraPathsToRegister guestPackages))}
 
-      for link in multi-user.target.wants/{${lib.concatStringsSep "," (lib.attrNames (units extraPathsToRegister))}} \
-                  serial-getty@{${serialConsole},hvc0}.service; do
+      for link in multi-user.target.wants/{${lib.concatStringsSep "," (lib.attrNames (units extraPathsToRegister guestPackages))}} \
+                  serial-getty@{${serialConsole},hvc0}.service \
+                  ${lib.concatStringsSep " " maskedUnits}; do
         debugfs -R "stat /etc/systemd/system/$link" rootfs.ext4 | grep -q 'Type: symlink' \
           || { echo "debugfs exited 0 but did not link $link in rootfs.ext4" >&2; exit 1; }
       done
@@ -136,7 +143,7 @@ let
     imagesJSON.${system} or { }
   );
 
-  prepareYoctoImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ] }:
+  prepareYoctoImage = { hostPkgs, originalImage, extraPathsToRegister ? [ ], maskedUnits ? [ ], guestPackages ? defaultGuestPackages }:
     let
       pkgs = hostPkgs;
       resultImg = "./image.qcow2";
@@ -146,7 +153,7 @@ let
     pkgs.runCommand "${baseNameOf (toString originalImage)}-nix-vm-test.qcow2" { } ''
       install -m777 ${originalImage} ${resultImg}
 
-      ${lib.concatStringsSep "\n" (lib.mapAttrsToList (unit: file: "cp ${file} ${unit}") (units extraPathsToRegister))}
+      ${lib.concatStringsSep "\n" (lib.mapAttrsToList (unit: file: "cp ${file} ${unit}") (units extraPathsToRegister guestPackages))}
 
       ${lib.concatStringsSep "  \\\n" ([
         "${pkgs.guestfs-tools}/bin/virt-customize"
@@ -164,22 +171,23 @@ let
       ++ [
         (mask "serial-getty@${serialConsole}.service")
         (mask "serial-getty@hvc0.service")
-      ])};
+      ]
+      ++ map mask maskedUnits)};
 
       cp ${resultImg} $out
     '';
 
-  testArgs = { testScript, sharedDirs ? {}, extraPathsToRegister ? [ ], extraRootModules ? [ ], memorySize ? null, cpus ? null }: {
-    inherit testScript sharedDirs memorySize cpus;
+  testArgs = { testScript, sharedDirs ? {}, extraPathsToRegister ? [ ], extraRootModules ? [ ], maskedUnits ? [ ], guestPackages ? defaultGuestPackages, extraQemuArgs ? [ ], memorySize ? null, cpus ? null }: {
+    inherit  testScript sharedDirs memorySize cpus extraQemuArgs;
   };
 
-  makeVmTestFromRootfs = name: rootfs: { extraPathsToRegister ? [ ], extraRootModules ? [ ], ... }@args: generic.makeVmTest (testArgs args // {
+  makeVmTestFromRootfs = name: rootfs: { extraPathsToRegister ? [ ], extraRootModules ? [ ], maskedUnits ? [ ], guestPackages ? defaultGuestPackages, ... }@args: generic.makeVmTest (testArgs args // {
     inherit name;
-    image = makeDiskImage name rootfs extraPathsToRegister;
+    image = makeDiskImage name rootfs (extraPathsToRegister ++ lib.optional (guestPackages != [ ]) (guestEnv guestPackages)) maskedUnits guestPackages;
     extraQemuArgs = kernelQemuArgs { inherit extraRootModules; };
   });
 
-  custom = { image, extraQemuArgs ? [ ], extraPathsToRegister ? [ ], ... }@args:
+  custom = { image, extraQemuArgs ? [ ], extraPathsToRegister ? [ ], maskedUnits ? [ ], guestPackages ? defaultGuestPackages, ... }@args:
     if isAarch64 then
       throw "nix-vm-test: yocto.custom is x86_64-linux only: libguestfs has no aarch64 appliance in nixpkgs, and the aarch64 virt machine needs UEFI firmware for a bootloader disk. Use yocto.fromRootfs."
     else
@@ -187,7 +195,7 @@ let
         inherit extraQemuArgs;
         name = "vm-test-yocto";
         image = prepareYoctoImage {
-          inherit extraPathsToRegister;
+          inherit extraPathsToRegister maskedUnits guestPackages;
           hostPkgs = pkgs;
           originalImage = image;
         };

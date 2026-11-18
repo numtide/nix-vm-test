@@ -23,9 +23,9 @@ let
     then lib.filterAttrs (name: _: !(unsupportedImage name)) imagesForSystem
     else imagesForSystem;
   images = lib.mapAttrs (k: v: fetchImage v) supportedImages;
-  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null }: generic.makeVmTest {
+  makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null, extraQemuArgs ? [ ] }: generic.makeVmTest {
     name = "vm-test-rocky_${imageID}";
-    inherit testScript sharedDirs memorySize cpus;
+    inherit  testScript sharedDirs memorySize cpus extraQemuArgs;
     image = prepareRockyImage {
       inherit diskSize extraPathsToRegister selinuxEnforcing;
       hostPkgs = pkgs;

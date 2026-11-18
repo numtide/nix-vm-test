@@ -170,6 +170,16 @@ Where:
 | cpus           | Number of virtual CPUs available to the guest VM. Defaults to 2.                                                                                                                                                                                                                     | 4                 |
 | selinuxEnforcing | Fedora and Rocky only. Boot with SELinux in enforcing mode instead of permissive. Defaults to `true` on Rocky and `false` on Fedora. | `false` |
 | testScript     | A Python script used to orchestrate the integration test. This is compatible with NixOS tests. You can have a look at the [relevant NixOS manual section](https://nixos.org/manual/nixos/stable/#ssec-machine-objects) to get the reference documentation of the available methods. | See above example |
+| extraPathsToRegister | Store paths registered in the guest's Nix database once the store is mounted, so a test may run them. | `[ pkgs.hello ]` |
+| extraQemuArgs  | Arguments appended to the qemu command line, to attach a device the image expects beside the rootfs. | `[ "-device nvme,drive=data,serial=data" ]` |
+
+These are accepted by `yocto` only:
+
+| Attribute Name | Description | Example |
+| -------------- | ----------- | ------- |
+| extraRootModules | Kernel modules added to the stage-1 initrd, for an image whose fstab names a device the default set does not reach. Yocto-only because it is the only target that boots a kernel and initrd of our own rather than the image's. | `[ "nvme" ]` |
+| maskedUnits    | Units linked to /dev/null in the image, for services bound to hardware a VM has no equivalent for. The other targets prepare their images with `virt-customize`, so sharing this means teaching each of them the same `--link` call. | `[ "docker.service" ]` |
+| guestPackages  | Packages whose `bin` goes on the PATH of the root shell the driver runs commands through. Defaults to `[ netcat-openbsd ]`, which `wait_for_open_port` needs. An empty list adds nothing. Sharing this means wiring `extraPath` through each target's backdoor script, which `fedora`, `rocky` and `archlinux` each copy differently. | `[ pkgs.jq ]` |
 
 #### Outputs
 
@@ -237,11 +247,41 @@ nix-vm-test.lib.x86_64-linux.yocto.fromRootfs {
 }
 ```
 
-`extraRootModules` adds kernel modules to the stage-1 initrd, for an image whose own fstab names
-a device the default set does not reach. An image that mounts partitions off a second disk
-attached with `-device nvme` needs `extraRootModules = [ "nvme" ];`, or systemd waits out the
-device unit's timeout and drops to emergency mode. The disk itself is not nix-vm-test's to
-provide: pass it through `QEMU_OPTS` on the test derivation.
+`extraRootModules` adds kernel modules to the stage-1 initrd, and `extraQemuArgs` adds qemu
+arguments, for an image whose own fstab names devices beside the rootfs:
+
+```nix
+nix-vm-test.lib.aarch64-linux.yocto.fromRootfs {
+  rootfs = ./my-image.rootfs.ext4;
+  extraRootModules = [ "nvme" ];
+  extraQemuArgs = [
+    "-drive file=${./data-disk.img},format=raw,if=none,id=data"
+    "-device nvme,drive=data,serial=data"
+  ];
+  maskedUnits = [ "docker.service" "ptp4l@eth0.service" ];
+  testScript = "vm.wait_for_unit(\"multi-user.target\")";
+}
+```
+
+`maskedUnits` links a unit to /dev/null in the image, the same way the serial gettys are
+masked. A vendor image is full of services bound to hardware a VM has no equivalent for, and
+they restart for as long as the test runs, so `multi-user.target` never settles.
+
+When a guest drops to emergency mode, look for `Expecting device ...` and a 90 second wait in
+the console log: the image wants a device this VM does not have. Either attach it with
+`extraQemuArgs` and name its driver in `extraRootModules`, or mask the unit that pulls it in.
+The driver reports this as `Guest root shell did not produce any data yet`, which says nothing
+about the cause.
+
+`guestPackages` puts a `buildEnv` of the packages it names on the PATH of the root shell the
+driver runs commands through, and registers that env with the store mount. The image itself is
+not touched, so a base image that already ships /usr/local/bin keeps it, and an empty list adds
+nothing to the closure. Note the scope: this is the test's PATH, not the PATH of services
+running inside the guest. It defaults to
+`[ netcat-openbsd ]` because the driver's `wait_for_open_port` runs `nc -z` in the guest, and
+the busybox and toybox `nc` these images ship take no `-z`: without a real netcat that call
+prints usage in a loop until its timeout rather than failing. The same argument serves a test
+that needs `getent`, `getcap` or `jq` from a distro that ships none of them.
 
 To use the image's own kernel and bootloader, pass a bootable disk instead:
 
