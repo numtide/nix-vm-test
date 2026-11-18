@@ -6,22 +6,21 @@ let
     url = image.url;
   };
 
-  # Rocky/RHEL 8.x aarch64 kernels are built with 64 KB memory pages. Not every
-  # aarch64 CPU implements that translation granule (notably Apple Silicon, which
-  # only supports 4 KB/16 KB) — on one that doesn't, the kernel's EFI stub refuses
+  # Rocky/RHEL 8.x aarch64 kernels are built with 64 KB memory pages. Apple Silicon
+  # only supports 4 KB/16 KB pages, so on a darwin host the kernel's EFI stub refuses
   # to boot ("64 KB granular kernel is not supported by your CPU") and the VM just
-  # hangs. This is a guest-architecture concern, not a darwin-specific one (e.g. an
-  # aarch64-linux host with a similarly-limited CPU would hit it too), so filter
-  # for any aarch64 guest rather than only when the host happens to be darwin.
+  # hangs. aarch64 Linux hosts generally support 64 KB pages (and TCG does), so the
+  # 8.x images are only skipped on darwin.
   #
-  # The aarch64 9.0 image is also unusable: the XFS allocation group headers past
-  # the first one are blank in the published file, so no kernel can mount its root
-  # (it hangs at boot regardless of how the image is prepared).
+  # The aarch64 9.0 image is unusable on any host: the XFS allocation group headers
+  # past the first one are blank in the published file, so no kernel can mount its
+  # root (it hangs at boot regardless of how the image is prepared).
   imagesForSystem = imagesJSON.${system} or {};
-  unsupportedOnAarch64 = name: lib.hasPrefix "8_" name || name == "9_0";
+  unsupportedImage = name:
+    name == "9_0" || (generic.hostIsDarwin && lib.hasPrefix "8_" name);
   supportedImages =
     if generic.guestIsAarch64
-    then lib.filterAttrs (name: _: !(unsupportedOnAarch64 name)) imagesForSystem
+    then lib.filterAttrs (name: _: !(unsupportedImage name)) imagesForSystem
     else imagesForSystem;
   images = lib.mapAttrs (k: v: fetchImage v) supportedImages;
   makeVmTestForImage = imageID: image: { testScript, sharedDirs ? {}, diskSize ? null, extraPathsToRegister ? [ ], selinuxEnforcing ? true, memorySize ? null, cpus ? null }: generic.makeVmTest {

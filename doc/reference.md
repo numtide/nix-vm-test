@@ -118,9 +118,9 @@ Where `$ROOT` will be `nix-vm-test.lib.<system>` on a flake-based setup.
 On macOS the VMs run as `aarch64-linux` guests, so only distributions that publish
 an `aarch64` image are available there. **Arch Linux is x86_64-only and is therefore
 not exposed on `aarch64-darwin`**, and Fedora is only available as release 43 there
-(older aarch64 releases are no longer on the release mirror). The Rocky 8.x and 9.0
-aarch64 images are skipped (8.x needs 64 KB pages, which Apple Silicon lacks; the 9.0
-image is damaged).
+(older aarch64 releases are no longer on the release mirror). The Rocky 9.0
+aarch64 image is skipped (it is damaged), and so are the 8.x ones on `aarch64-darwin`
+(they need 64 KB pages, which Apple Silicon lacks).
 
 Where `$DISTRIBUTION` is a `$NAME.$VERSION` couple. Here's the currently supported name/version couples:
 
