@@ -53,7 +53,8 @@ You configure **nix-vm-test** using Nix package manager, either in a flake or in
   - **Linux**: any `x86_64-linux` or `aarch64-linux` machine, with hardware **KVM**
     acceleration (`/dev/kvm`). The project will run without it, but it will be too
     slow for practical purposes.
-  - **macOS**: Apple Silicon (`aarch64-darwin`), with a **Linux builder** — nix-darwin's
+  - **macOS**: Apple Silicon (`aarch64-darwin`) running **macOS 15 or later** (the VMs
+    are accelerated with Apple's Hypervisor.framework, `accel=hvf`), with a **Linux builder** — nix-darwin's
     [`linux-builder`](https://nix-darwin.github.io/nix-darwin/manual/index.html#opt-nix.linux-builder.enable)
     or a remote `aarch64-linux` build machine. This is **required**: the guest
     image is customized in a Linux derivation that is not available from any binary

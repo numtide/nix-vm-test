@@ -113,7 +113,7 @@ Where `$ROOT` will be `nix-vm-test.lib.<system>` on a flake-based setup.
 | ---------------- | --------------- | ------------ | -------------------------------------- |
 | `x86_64-linux`   | `x86_64-linux`  | KVM          |                                        |
 | `aarch64-linux`  | `aarch64-linux` | KVM          |                                        |
-| `aarch64-darwin` | `aarch64-linux` | HVF          | Requires a Linux builder (see README). |
+| `aarch64-darwin` | `aarch64-linux` | HVF          | macOS 15+. Requires a Linux builder (see README). |
 
 On macOS the VMs run as `aarch64-linux` guests, so only distributions that publish
 an `aarch64` image are available there. **Arch Linux is x86_64-only and is therefore
