@@ -1,4 +1,10 @@
 { lib, hostPkgs, guestPkgs, nixpkgs }:
+let
+  qemu-common = import "${nixpkgs}/nixos/lib/qemu-common.nix" {
+    inherit lib;
+    inherit (guestPkgs) stdenv;
+  };
+in
 rec {
   # `hostPkgs`  : packages that run on the machine driving the test (QEMU, the
   #               Python test-driver, the run-vm wrapper script). On a Linux host
@@ -7,10 +13,9 @@ rec {
   #               image (backdoor shell, `nix-store`, image preparation). These must
   #               always be Linux packages, so on darwin they are built for the
   #               matching `*-linux` system (via a Linux/remote builder).
-  qemuArch = guestPkgs.stdenv.hostPlatform.qemuArch;
   guestIsAarch64 = guestPkgs.stdenv.hostPlatform.isAarch64;
   hostIsDarwin = hostPkgs.stdenv.hostPlatform.isDarwin;
-  serialConsole = if guestIsAarch64 then "ttyAMA0" else "ttyS0";
+  serialConsole = qemu-common.qemuSerialDevice;
 
   defaultMachineConfigModule = { ... }: {
     nodes = {
@@ -262,21 +267,10 @@ rec {
       let
         qemupkg = (if !interactive then hostPkgs.qemu_test else hostPkgs.qemu);
 
-        # On darwin we accelerate with Apple's Hypervisor.framework (HVF); on Linux
-        # with KVM. We only ever pair a host with a same-architecture Linux guest
-        # (e.g. aarch64-darwin → aarch64-linux), so hardware acceleration applies
-        # whenever the host has it. On a Linux host without /dev/kvm (e.g. GitHub's
-        # hosted arm64 runners) QEMU falls back to TCG emulation: slow, but it runs,
-        # as nixpkgs' own `accel=kvm:tcg` does.
-        accel = if hostIsDarwin then "hvf" else "kvm:tcg";
-
-        qemuBinary = "${lib.getBin qemupkg}/bin/qemu-system-${qemuArch}";
-
-        machineFlags =
-          if guestIsAarch64 then
-            [ "-machine virt,accel=${accel}" ]
-          else
-            [ "-machine accel=${accel}" ];
+        # nixpkgs picks the binary, machine type and accelerator for this host/guest
+        # pair: KVM (falling back to TCG emulation) on Linux, HVF on darwin, and
+        # `-cpu max`.
+        qemuBinary = qemu-common.qemuBinary qemupkg;
 
         firmwareFlags = lib.optionals guestIsAarch64 [
           "-drive if=pflash,format=raw,unit=0,readonly=on,file=${qemupkg}/share/qemu/edk2-aarch64-code.fd"
@@ -346,9 +340,7 @@ rec {
           # Start QEMU.
           ${lib.concatStringsSep "\\\n  " ([
             "exec ${qemuBinary}"
-          ] ++ machineFlags ++ [
             "-device virtio-rng-pci"
-            "-cpu max"
             "-name vm"
             "-m ${toString node.virtualisation.memorySize}"
             "-smp ${toString node.virtualisation.cpus}"
