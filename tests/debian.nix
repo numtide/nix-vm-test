@@ -12,6 +12,16 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.debian.${n}))
     lib.debian.images;
 in {
+  # The VMs have no network, so ssh is masked to keep it from failing at boot.
+  sshMasked = (lib.debian."13" {
+    sharedDirs = {};
+    testScript = ''
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('test "$(systemctl is-enabled ssh.service 2>&1 || true)" = masked')
+      vm.succeed('test "$(systemctl is-enabled ssh.socket 2>&1 || true)" = masked')
+    '';
+  }).sandboxed;
+
   resizeImage = (lib.debian."13" {
     sharedDirs = {};
     testScript = ''

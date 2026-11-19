@@ -13,6 +13,16 @@ let
     (n: v: pkgs.lib.nameValuePair "${n}-multi-user-test" (test lib.ubuntu.${n}))
     lib.ubuntu.images;
 in {
+  # The VMs have no network, so ssh is masked to keep it from failing at boot.
+  sshMasked = (lib.ubuntu."24_04" {
+    sharedDirs = {};
+    testScript = ''
+      vm.wait_for_unit("multi-user.target")
+      vm.succeed('test "$(systemctl is-enabled ssh.service 2>&1 || true)" = masked')
+      vm.succeed('test "$(systemctl is-enabled ssh.socket 2>&1 || true)" = masked')
+    '';
+  }).sandboxed;
+
   resizeImage = (lib.ubuntu."23_04" {
     sharedDirs = {};
     testScript = ''

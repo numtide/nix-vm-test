@@ -60,8 +60,9 @@ let
           systemctl --root="$mnt" mask serial-getty@hvc0.service
 
           # We have no network in the test VMs, avoid an error on bootup
-          systemctl --root="$mnt" mask ssh.service
-          systemctl --root="$mnt" mask ssh.socket
+          # (the unit is called sshd on this distribution, not ssh)
+          systemctl --root="$mnt" mask sshd.service
+          systemctl --root="$mnt" mask sshd.socket
 
           # Retrieve guest interface conf via DHCP
           mkdir -p "$mnt/etc/systemd/network"
