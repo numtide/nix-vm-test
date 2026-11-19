@@ -23,12 +23,13 @@ let
   fedora = prev.callPackage ./fedora { inherit generic; pkgs = guestPkgs; system = guestSystem; };
   rocky = prev.callPackage ./rocky { inherit generic; pkgs = guestPkgs; system = guestSystem; };
   archlinux = prev.callPackage ./archlinux { inherit generic; pkgs = guestPkgs; system = guestSystem; };
+  yocto = prev.callPackage ./yocto { inherit generic; pkgs = guestPkgs; system = guestSystem; };
 in
 
 {
   testers = prev.testers or { } // {
     nonNixOSDistros = prev.testers.nonNixOSDistros or {} // {
-      inherit debian ubuntu fedora rocky archlinux;
+      inherit debian ubuntu fedora rocky archlinux yocto;
     };
   };
 }

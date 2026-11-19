@@ -162,6 +162,48 @@ def archlinux_parse():
         }
     })
 
+def yocto_parse():
+    """The Yocto Project release builds, poky-altcfg (systemd) configuration."""
+    index_url = "https://downloads.yoctoproject.org/releases/yocto/"
+    tracked_minors = ["6.0", "6.1"]
+    machines = {"x86_64-linux": "qemux86-64", "aarch64-linux": "qemuarm64"}
+
+    print(f"[+] Parsing yocto index {index_url}")
+    page = requests.get(index_url)
+    page.raise_for_status()
+    soup = BeautifulSoup(page.content, "html.parser")
+    releases = [
+        link["href"].rstrip("/")
+        for link in soup.find_all("a")
+        if re.compile(r"^yocto-[0-9]+\.[0-9]+(\.[0-9]+)?/$").match(link["href"])
+    ]
+
+    def latest_patch(minor):
+        candidates = [r for r in releases if re.compile(rf"^yocto-{re.escape(minor)}(\.[0-9]+)?$").match(r)]
+        if not candidates:
+            raise RuntimeError(f"no yocto-{minor} release at {index_url}")
+        return max(candidates, key=lambda r: [int(x) for x in r[len("yocto-"):].split(".")])
+
+    def latest_rootfs(release, machine):
+        url = f"{index_url}{release}/machines/qemu/{machine}-alt/"
+        print(f"[+] Parsing {url}")
+        page = requests.get(url)
+        page.raise_for_status()
+        soup = BeautifulSoup(page.content, "html.parser")
+        pattern = re.compile(rf"^core-image-full-cmdline-{machine}\.rootfs-([0-9]+)\.ext4\.zst$")
+        dated = [(m.group(1), link["href"]) for link in soup.find_all("a") if (m := pattern.match(link["href"]))]
+        if not dated:
+            raise RuntimeError(f"no core-image-full-cmdline rootfs at {url}")
+        return url + max(dated)[1]
+
+    res = {arch: {} for arch in machines}
+    for minor in tracked_minors:
+        release = latest_patch(minor)
+        for arch, machine in machines.items():
+            url = latest_rootfs(release, machine)
+            res[arch][minor.replace(".", "_")] = {"url": url, "hash": nix_hash(url)}
+    return json.dumps(res)
+
 if __name__ == '__main__':
     ubuntu_json = ubuntu_parse()
     with open("ubuntu.json", "w") as f:
@@ -172,3 +214,6 @@ if __name__ == '__main__':
     archlinux_json = archlinux_parse()
     with open("archlinux.json", "w") as f:
         f.write(archlinux_json)
+    yocto_json = yocto_parse()
+    with open("yocto.json", "w") as f:
+        f.write(yocto_json)

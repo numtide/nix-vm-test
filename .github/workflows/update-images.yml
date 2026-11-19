@@ -17,9 +17,10 @@ jobs:
       - name: Run update-images.py
         run: |
           scripts/update-images.py
-          for distro in ubuntu debian; do
-            cat "$distro".json | jq -S > "$distro"/images.json
-            rm "$distro".json
+          for json in *.json; do
+            distro="${json%.json}"
+            jq -S < "$json" > "$distro"/images.json
+            rm "$json"
           done
           if [[ -z $(git status -s) ]]; then
             echo "Images up to date"
@@ -31,8 +32,7 @@ jobs:
             git config user.email github-actions@github.com
             branchname="update-images"
             git checkout -b "${branchname}"
-            git add debian/images.json
-            git add ubuntu/images.json
+            git add ./*/images.json
             git commit -m "Update images: $(date +%F)"
             git push --force origin "${branchname}"
             if [[ -n $(gh pr list --head "${branchname}" --state open --json number --jq '.[].number') ]]; then
