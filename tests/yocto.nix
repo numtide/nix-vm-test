@@ -6,12 +6,12 @@ let
     vm.start(allow_reboot=True)
     vm.wait_for_unit("multi-user.target")
     vm.succeed("grep -E '^[^ ]+ /nix/store overlay ' /proc/mounts")
-    vm.succeed("${pkgs.hello}/bin/hello")
-    vm.succeed("${pkgs.nix}/bin/nix-store --query --requisites ${pkgs.hello}")
+    vm.succeed("${guestPkgs.hello}/bin/hello")
+    vm.succeed("${guestPkgs.nix}/bin/nix-store --query --requisites ${guestPkgs.hello}")
     vm.succeed("[ $(nproc) = 3 ]")
     vm.succeed("[ $(awk '/MemTotal/ {print $2}' /proc/meminfo) -gt 1400000 ]")
     vm.succeed("command -v nc")
-    vm.succeed("${pkgs.python3}/bin/python3 -m http.server 8111 >/dev/null 2>&1 &")
+    vm.succeed("${guestPkgs.python3}/bin/python3 -m http.server 8111 >/dev/null 2>&1 &")
     vm.wait_for_open_port(8111)
     ${if isAarch64 then ''
       vm.succeed("systemctl reboot")
@@ -20,13 +20,13 @@ let
       vm.reboot()
     ''}
     vm.wait_for_unit("multi-user.target")
-    vm.succeed("${pkgs.hello}/bin/hello")
-    vm.succeed("${pkgs.nix}/bin/nix-store --query --requisites ${pkgs.hello}")
+    vm.succeed("${guestPkgs.hello}/bin/hello")
+    vm.succeed("${guestPkgs.nix}/bin/nix-store --query --requisites ${guestPkgs.hello}")
   '';
   args = {
     inherit testScript;
     sharedDirs = {};
-    extraPathsToRegister = [ pkgs.hello pkgs.python3 ];
+    extraPathsToRegister = [ guestPkgs.hello guestPkgs.python3 ];
     memorySize = 1536;
     cpus = 3;
   };
